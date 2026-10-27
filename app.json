@@ -28,6 +28,10 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
       ]
     },
@@ -78,6 +82,12 @@
         "projectId": "8ec7a62c-55ac-4cf2-b75c-0899c38be229"
       }
     },
-    "owner": "vhfanes"
+    "owner": "vhfanes",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8ec7a62c-55ac-4cf2-b75c-0899c38be229"
+    }
   }
 }
