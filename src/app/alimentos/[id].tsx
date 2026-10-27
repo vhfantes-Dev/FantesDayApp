@@ -3,19 +3,24 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { foodApi, mealApi } from '@/api/endpoints';
-import type { Food } from '@/api/types';
+import type { Food, FoodUnit } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
-import { MacroInline, QuantityStepper, SourceTag } from '@/components/nutrition/shared';
+import { MacroInline, QuantityStepper, Segmented, SourceTag, toGrams } from '@/components/nutrition/shared';
 import { useToast } from '@/components/Toast';
 import { Button, Card, ErrorBanner, IconButton, LoadingView, MacroBar, Screen, T } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
-import { formatNumber, today } from '@/utils/format';
+import { formatDecimal, formatNumber, today } from '@/utils/format';
 
 const NEW_MEAL = 'new';
 
-function per(value: number | null, qty: number) {
-  return ((value ?? 0) * qty) / 100;
+// Valor na porção a partir do valor por 100 g (grams já convertidos de ml quando preciso).
+function per(value: number | null, grams: number) {
+  return ((value ?? 0) * grams) / 100;
+}
+
+function initialUnit(food: Food): FoodUnit {
+  return food.defaultUnit === 'ml' || food.liquid ? 'ml' : 'g';
 }
 
 function goBack() {
@@ -36,6 +41,24 @@ export default function AlimentoScreen() {
   const selected = mealId ?? target ?? (meals.data?.length ? String(meals.data[meals.data.length - 1].id) : NEW_MEAL);
 
   const [qty, setQty] = useState(100);
+  const [unit, setUnit] = useState<FoodUnit>('g');
+  const [unitFor, setUnitFor] = useState<number | null>(null);
+
+  // Unidade inicial = unidade padrão do alimento (ml para líquidos).
+  if (food && unitFor !== food.id) {
+    setUnitFor(food.id);
+    const u = initialUnit(food);
+    setUnit(u);
+    setQty(u === 'ml' ? 200 : 100);
+  }
+
+  const grams = food ? toGrams(qty, unit, food.densityGPerMl) : 0;
+
+  function changeUnit(u: FoodUnit) {
+    if (u === unit) return;
+    setUnit(u);
+    setQty(u === 'ml' ? 200 : 100);
+  }
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -54,8 +77,8 @@ export default function AlimentoScreen() {
         const meal = await mealApi.create(user.id, { date: today() });
         targetId = String(meal.id);
       }
-      await mealApi.addItem(Number(targetId), { foodId: food.id, quantity: qty, unit: 'g' });
-      toast.success(`${food.name} adicionado · ${formatNumber(per(food.caloriesPer100g, qty))} kcal`);
+      await mealApi.addItem(Number(targetId), { foodId: food.id, quantity: qty, unit });
+      toast.success(`${food.name} adicionado · ${formatNumber(per(food.caloriesPer100g, grams))} kcal`);
       if (mealId) router.dismissTo({ pathname: '/refeicoes/[id]', params: { id: mealId } });
       else router.dismissTo('/nutricao');
     } catch (e) {
@@ -86,7 +109,7 @@ export default function AlimentoScreen() {
     ]);
   }
 
-  const kcal = food ? per(food.caloriesPer100g, qty) : 0;
+  const kcal = food ? per(food.caloriesPer100g, grams) : 0;
 
   return (
     <Screen
@@ -122,6 +145,7 @@ export default function AlimentoScreen() {
             <Text style={styles.name}>{food.name}</Text>
             <T variant="caption" style={{ fontSize: 13 }}>
               Valores por 100 g · {formatNumber(food.caloriesPer100g)} kcal
+              {food.liquid ? ` · ${formatDecimal(food.densityGPerMl ?? 1, 2)} g/ml` : ''}
             </T>
           </View>
 
@@ -133,11 +157,32 @@ export default function AlimentoScreen() {
           </View>
 
           <Card style={styles.section}>
-            <T variant="label">Quantidade</T>
-            <QuantityStepper value={qty} onChange={setQty} />
+            <View style={styles.qtyHead}>
+              <T variant="label">Quantidade</T>
+              {food.liquid ? (
+                <View style={{ width: 120 }}>
+                  <Segmented
+                    label="Unidade"
+                    tone="accent"
+                    value={unit}
+                    onChange={changeUnit}
+                    options={[
+                      { value: 'g', label: 'g' },
+                      { value: 'ml', label: 'ml' },
+                    ]}
+                  />
+                </View>
+              ) : null}
+            </View>
+            <QuantityStepper value={qty} onChange={setQty} unit={unit} />
+            {unit === 'ml' ? (
+              <T variant="caption">
+                {formatNumber(qty)} ml ≈ {formatDecimal(grams, 1)} g
+              </T>
+            ) : null}
           </Card>
 
-          <PortionCard food={food} qty={qty} />
+          <PortionCard food={food} grams={grams} />
 
           {!mealId ? (
             <View style={{ gap: 8 }}>
@@ -169,15 +214,15 @@ function Tile({ value, label, color }: { value: number | null; label: string; co
   );
 }
 
-function PortionCard({ food, qty }: { food: Food; qty: number }) {
-  const p = per(food.proteinPer100g, qty);
-  const c = per(food.carbsPer100g, qty);
-  const f = per(food.fatPer100g, qty);
+function PortionCard({ food, grams }: { food: Food; grams: number }) {
+  const p = per(food.proteinPer100g, grams);
+  const c = per(food.carbsPer100g, grams);
+  const f = per(food.fatPer100g, grams);
   return (
     <Card style={styles.section}>
       <View style={styles.portionHead}>
         <T variant="label">Nesta porção</T>
-        <Text style={styles.portionKcal}>{formatNumber(per(food.caloriesPer100g, qty))} kcal</Text>
+        <Text style={styles.portionKcal}>{formatNumber(per(food.caloriesPer100g, grams))} kcal</Text>
       </View>
       <MacroBar protein={p} carbs={c} fat={f} />
       <MacroInline protein={p} carbs={c} fat={f} size={12} gap={14} />
@@ -217,6 +262,7 @@ const styles = StyleSheet.create({
   },
   tileValue: { fontFamily: fonts.extrabold, fontSize: 15 },
   section: { gap: 14, padding: 18, borderRadius: 24 },
+  qtyHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 32 },
   portionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   portionKcal: { fontFamily: fonts.title, fontSize: 20, color: colors.text },
   mealChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -1,7 +1,10 @@
 import { api } from './client';
 import type {
   Activity,
+  ActivityImportRequest,
+  ActivityImportResult,
   ActivityRequest,
+  BodyMetrics,
   AuthResponse,
   Dashboard,
   DailyNutrition,
@@ -34,6 +37,7 @@ import type {
   UserRequest,
   WaterDay,
   WeeklyLeaderboardEntry,
+  WeightGoal,
   WeightEntry,
   WeightHistory,
   Workout,
@@ -86,6 +90,9 @@ export const activityApi = {
   create: (userId: number, data: ActivityRequest) => api.post<Activity>(`/users/${userId}/activities`, data),
   update: (id: number, data: ActivityRequest) => api.patch<Activity>(`/activities/${id}`, data),
   remove: (id: number) => api.del(`/activities/${id}`),
+  // Lote vindo de Apple Saúde / Google Fit; externalId evita importar duas vezes
+  importBatch: (userId: number, data: ActivityImportRequest) =>
+    api.post<ActivityImportResult>(`/users/${userId}/activities/import`, data),
 };
 
 export const foodApi = {
@@ -115,6 +122,10 @@ export const goalApi = {
   get: (userId: number) => api.get<NutritionGoal>(`/users/${userId}/goals`),
   update: (userId: number, data: NutritionGoalRequest) => api.patch<NutritionGoal>(`/users/${userId}/goals`, data),
   daily: (userId: number, date?: string) => api.get<DailyNutrition>(`/users/${userId}/nutrition/daily`, { date }),
+  // TMB, gasto diário, IMC e metas sugeridas
+  bodyMetrics: (userId: number) => api.get<BodyMetrics>(`/users/${userId}/body-metrics`),
+  applySuggestion: (userId: number, goal: WeightGoal) =>
+    api.post<NutritionGoal>(`/users/${userId}/goals/apply-suggestion`, { goal }),
 };
 
 export const trackingApi = {

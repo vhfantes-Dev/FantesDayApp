@@ -1,32 +1,31 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { routineApi, workoutApi } from '@/api/endpoints';
-import type { EquipmentType, TrainingGoal, TrainingLevel } from '@/api/types';
 import { useUserId } from '@/auth/AuthContext';
 import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { Button, Field, IconButton, Screen, T } from '@/components/ui';
 import { formatBrDate, parseBrDate } from '@/components/workouts/labels';
-import { OptionGrid, Segmented, ToggleChip } from '@/components/workouts/parts';
+import { OptionGrid, Segmented } from '@/components/workouts/parts';
 import { useAction } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
 import { today } from '@/utils/format';
-import { EQUIPMENT_LABELS, GOAL_LABELS, LEVEL_LABELS } from '@/utils/ranks';
 
-type Mode = 'livre' | 'rotina' | 'gerar';
+type Mode = 'livre' | 'rotina';
 
 const XP_OPTIONS = [30, 50, 80, 100].map((v) => ({ value: v, label: String(v) }));
-const DAY_OPTIONS = [1, 2, 3, 4, 5, 6].map((v) => ({ value: v, label: String(v) }));
-const GOALS = (Object.keys(GOAL_LABELS) as TrainingGoal[]).map((v) => ({ value: v, label: GOAL_LABELS[v] }));
-const LEVELS = (Object.keys(LEVEL_LABELS) as TrainingLevel[]).map((v) => ({ value: v, label: LEVEL_LABELS[v] }));
-const EQUIPMENT = Object.keys(EQUIPMENT_LABELS) as EquipmentType[];
 
 export default function NovoTreinoScreen() {
   const params = useLocalSearchParams<{ modo?: string }>();
-  const initial: Mode = params.modo === 'rotina' || params.modo === 'gerar' ? params.modo : 'livre';
+  const initial: Mode = params.modo === 'rotina' ? 'rotina' : 'livre';
   const [mode, setMode] = useState<Mode>(initial);
+
+  // O gerador agora tem tela própria.
+  useEffect(() => {
+    if (params.modo === 'gerar') router.replace('/rotinas/gerar');
+  }, [params.modo]);
 
   return (
     <Screen contentStyle={{ gap: 20 }}>
@@ -43,11 +42,10 @@ export default function NovoTreinoScreen() {
         options={[
           { value: 'livre', label: 'Treino livre' },
           { value: 'rotina', label: 'Rotina' },
-          { value: 'gerar', label: 'Gerar rotinas' },
         ]}
       />
 
-      {mode === 'livre' ? <FreeWorkoutForm /> : mode === 'rotina' ? <RoutineForm /> : <GenerateForm />}
+      {mode === 'livre' ? <FreeWorkoutForm /> : <RoutineForm />}
     </Screen>
   );
 }
@@ -135,86 +133,18 @@ function RoutineForm() {
       <T variant="caption" style={{ fontSize: 13, lineHeight: 20 }}>
         Uma rotina é um modelo reutilizável: escolha os exercícios com séries, repetições e descanso e inicie quando quiser.
       </T>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/rotinas/gerar')} style={({ pressed }) => [styles.genLink, pressed && { opacity: 0.85 }]}>
+        <Icon name="sparkles" size={20} color={colors.accent} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <T style={{ fontFamily: fonts.bold }}>Prefere gerar automaticamente?</T>
+          <T variant="caption">Pelo objetivo, dias por semana, nível e equipamentos</T>
+        </View>
+        <Icon name="chevronRight" size={18} color={colors.accent} />
+      </Pressable>
       {create.error ? <T variant="caption" color={colors.danger} style={{ fontFamily: fonts.semibold }}>{create.error}</T> : null}
       <Button title="Criar rotina" onPress={submit} loading={create.pending} style={{ marginTop: 8 }} />
     </>
   );
-}
-
-function GenerateForm() {
-  const userId = useUserId();
-  const toast = useToast();
-  const [goal, setGoal] = useState<TrainingGoal>('HYPERTROPHY');
-  const [days, setDays] = useState(3);
-  const [level, setLevel] = useState<TrainingLevel>('BEGINNER');
-  const [equipment, setEquipment] = useState<EquipmentType[]>(EQUIPMENT);
-  const [equipError, setEquipError] = useState<string>();
-  const generate = useAction(routineApi.generate);
-
-  function toggle(e: EquipmentType) {
-    setEquipment((list) => (list.includes(e) ? list.filter((x) => x !== e) : [...list, e]));
-  }
-
-  async function submit() {
-    if (!equipment.length) {
-      setEquipError('Escolha pelo menos um equipamento.');
-      return;
-    }
-    setEquipError(undefined);
-    const routines = await generate.run(userId, { goal, daysPerWeek: days, level, equipment, save: true });
-    if (!routines) return;
-    toast.success(routines.length === 1 ? '1 rotina criada' : `${routines.length} rotinas criadas`);
-    router.dismissTo('/treinos');
-  }
-
-  return (
-    <>
-      <View style={{ gap: 8 }}>
-        <T variant="label">Objetivo</T>
-        <Segmented<TrainingGoal> label="Objetivo" options={GOALS} value={goal} onChange={setGoal} />
-        <T variant="caption">{goalHint(goal)}</T>
-      </View>
-      <View style={{ gap: 8 }}>
-        <T variant="label">Dias por semana</T>
-        <OptionGrid label="Dias por semana" options={DAY_OPTIONS} value={days} onChange={setDays} />
-        <T variant="caption">{splitHint(days, level)}</T>
-      </View>
-      <View style={{ gap: 8 }}>
-        <T variant="label">Nível</T>
-        <Segmented<TrainingLevel> label="Nível" options={LEVELS} value={level} onChange={setLevel} />
-      </View>
-      <View style={{ gap: 8 }}>
-        <T variant="label">Equipamentos disponíveis</T>
-        <View style={styles.wrap}>
-          {EQUIPMENT.map((e) => (
-            <ToggleChip key={e} label={EQUIPMENT_LABELS[e]} active={equipment.includes(e)} onPress={() => toggle(e)} />
-          ))}
-        </View>
-        {equipError ? <T variant="caption" color={colors.danger} style={{ fontFamily: fonts.semibold }}>{equipError}</T> : null}
-      </View>
-      {generate.error ? <T variant="caption" color={colors.danger} style={{ fontFamily: fonts.semibold }}>{generate.error}</T> : null}
-      <Button title="Gerar rotinas" icon="sparkles" onPress={submit} loading={generate.pending} style={{ marginTop: 8 }} />
-    </>
-  );
-}
-
-function goalHint(goal: TrainingGoal) {
-  switch (goal) {
-    case 'STRENGTH':
-      return '4 séries de 3-6 repetições · 180 s de descanso';
-    case 'ENDURANCE':
-      return '3 séries de 15-20 repetições · 45 s de descanso';
-    default:
-      return '3 séries de 8-12 repetições · 90 s de descanso';
-  }
-}
-
-function splitHint(days: number, level: TrainingLevel) {
-  if (days <= 2) return 'Divisão: Full Body';
-  if (days === 3) return level === 'BEGINNER' ? 'Divisão: Full Body' : 'Divisão: Push / Pull / Legs';
-  if (days === 4) return 'Divisão: Superiores / Inferiores';
-  if (days === 5) return 'Divisão: Push / Pull / Legs + Superiores / Inferiores';
-  return 'Divisão: Push / Pull / Legs duas vezes';
 }
 
 const styles = StyleSheet.create({
@@ -231,5 +161,14 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDashed,
   },
   dashedIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  genLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: colors.accentSoftBorder,
+  },
 });

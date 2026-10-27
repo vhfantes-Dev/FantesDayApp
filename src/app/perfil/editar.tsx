@@ -3,20 +3,21 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { authApi, goalApi, userApi } from '@/api/endpoints';
-import type { NutritionGoalRequest, Sex, UserRequest } from '@/api/types';
+import { goalApi, userApi } from '@/api/endpoints';
+import type { ActivityLevel, NutritionGoalRequest, Sex, UserRequest } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
+import { ACTIVITY_LEVELS, ageFrom } from '@/components/conta/body';
 import { UserPhoto, useDeleteAccount } from '@/components/conta/UserPhoto';
+import { brToIso, isoToBr, maskDate } from '@/components/rotina/dates';
 import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { Button, Chip, ErrorBanner, Field, Header, Screen, Section, SkeletonList, T } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
-import { formatDecimal, parseNumber } from '@/utils/format';
+import { formatDecimal, parseNumber, today } from '@/utils/format';
 
 type GoalKey = 'dailyCalories' | 'proteinG' | 'carbsG' | 'fatG' | 'dailyWaterMl';
-type Errors = Partial<Record<'name' | 'email' | 'weight' | GoalKey, string>>;
-type PasswordErrors = Partial<Record<'current' | 'next' | 'confirm', string>>;
+type Errors = Partial<Record<'name' | 'email' | 'weight' | 'height' | 'birth' | GoalKey, string>>;
 
 const GOAL_FIELDS: { key: GoalKey; label: string; placeholder: string; max: number }[] = [
   { key: 'dailyCalories', label: 'Calorias (kcal)', placeholder: '2200', max: 10000 },
@@ -29,7 +30,7 @@ const GOAL_FIELDS: { key: GoalKey; label: string; placeholder: string; max: numb
 const numText = (n: number | null | undefined) => (n === null || n === undefined ? '' : formatDecimal(n));
 
 export default function EditarPerfilScreen() {
-  const { user, setUser, refreshUser, applyAuth } = useAuth();
+  const { user, setUser, refreshUser } = useAuth();
   const userId = user?.id ?? 0;
   const toast = useToast();
   const deleteAccount = useDeleteAccount();
@@ -40,6 +41,9 @@ export default function EditarPerfilScreen() {
   const [email, setEmail] = useState(user?.email ?? '');
   const [weight, setWeight] = useState(numText(user?.bodyweightKg));
   const [sex, setSex] = useState<Sex | null>(user?.sex ?? null);
+  const [height, setHeight] = useState(user?.heightCm ? String(Math.round(user.heightCm)) : '');
+  const [birth, setBirth] = useState(isoToBr(user?.birthDate));
+  const [level, setLevel] = useState<ActivityLevel | null>(user?.activityLevel ?? null);
   const [goalForm, setGoalForm] = useState<Record<GoalKey, string>>({
     dailyCalories: '',
     proteinG: '',
@@ -54,12 +58,6 @@ export default function EditarPerfilScreen() {
 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
-
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [pwErrors, setPwErrors] = useState<PasswordErrors>({});
-  const [pwPending, setPwPending] = useState(false);
 
   useEffect(() => {
     const g = goals.data;
@@ -84,6 +82,15 @@ export default function EditarPerfilScreen() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = 'Informe um e-mail válido.';
     const kg = parseNumber(weight);
     if (weight.trim() && (kg === undefined || kg < 20 || kg > 400)) next.weight = 'Peso inválido (20 a 400 kg).';
+    const cm = height.trim() ? Number(height) : undefined;
+    if (cm !== undefined && (!Number.isFinite(cm) || cm < 100 || cm > 250)) next.height = 'Altura inválida (100 a 250 cm).';
+    let birthIso: string | undefined;
+    if (birth.trim()) {
+      const iso = brToIso(birth);
+      if (!iso) next.birth = 'Data inválida. Use dd/mm/aaaa.';
+      else if (ageFrom(iso, today()) < 10 || ageFrom(iso, today()) > 110) next.birth = 'Confira o ano de nascimento.';
+      else birthIso = iso;
+    }
 
     const goalRequest: NutritionGoalRequest = {};
     for (const f of GOAL_FIELDS) {
@@ -103,6 +110,9 @@ export default function EditarPerfilScreen() {
     if (email.trim() !== currentUser.email) profile.email = email.trim();
     if (kg !== undefined && kg !== currentUser.bodyweightKg) profile.bodyweightKg = kg;
     if (sex && sex !== currentUser.sex) profile.sex = sex;
+    if (cm !== undefined && cm !== currentUser.heightCm) profile.heightCm = cm;
+    if (birthIso && birthIso !== currentUser.birthDate) profile.birthDate = birthIso;
+    if (level && level !== currentUser.activityLevel) profile.activityLevel = level;
 
     const g = goals.data;
     const goalsChanged =
@@ -173,31 +183,6 @@ export default function EditarPerfilScreen() {
     ]);
   }
 
-  async function changePassword() {
-    const next: PasswordErrors = {};
-    if (!currentPassword) next.current = 'Informe a senha atual.';
-    if (newPassword.length < 8 || newPassword.length > 72) next.next = 'A senha precisa ter de 8 a 72 caracteres.';
-    else if (newPassword === currentPassword) next.next = 'A nova senha deve ser diferente da atual.';
-    if (confirmPassword !== newPassword) next.confirm = 'As senhas não conferem.';
-    setPwErrors(next);
-    if (Object.keys(next).length) return;
-    setPwPending(true);
-    try {
-      await applyAuth(await authApi.changePassword(currentPassword, newPassword));
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      toast.success('Senha alterada. As outras sessões foram encerradas.');
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Algo deu errado. Tente de novo.';
-      if (/atual/i.test(message)) setPwErrors({ current: 'Senha atual incorreta.' });
-      else if (/senha/i.test(message)) setPwErrors({ next: message });
-      else toast.error(message);
-    } finally {
-      setPwPending(false);
-    }
-  }
-
   return (
     <Screen footer={<Button title="Salvar" onPress={save} loading={saving} />}>
       <Header title="Editar perfil" />
@@ -253,28 +238,80 @@ export default function EditarPerfilScreen() {
         autoComplete="email"
         error={errors.email}
       />
-      <Field
-        label="Peso (kg) · p/ rank"
-        value={weight}
-        onChangeText={(t) => {
-          setWeight(t.replace(/[^\d.,]/g, ''));
-          setErrors((e) => ({ ...e, weight: undefined }));
-        }}
-        placeholder="Ex: 78,5"
-        keyboardType="decimal-pad"
-        maxLength={6}
-        hint="Ao mudar, o peso de hoje entra no seu histórico."
-        error={errors.weight}
-      />
-      <View style={{ gap: 8 }}>
-        <T variant="label">Sexo · p/ rank</T>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Chip label="Masculino" tone="accent" active={sex === 'MALE'} onPress={() => setSex('MALE')} />
-          <Chip label="Feminino" tone="accent" active={sex === 'FEMALE'} onPress={() => setSex('FEMALE')} />
+      <View style={styles.row}>
+        <Field
+          style={{ flex: 1 }}
+          label="Peso (kg) · p/ rank"
+          value={weight}
+          onChangeText={(t) => {
+            setWeight(t.replace(/[^\d.,]/g, ''));
+            setErrors((e) => ({ ...e, weight: undefined }));
+          }}
+          placeholder="78,5"
+          keyboardType="decimal-pad"
+          maxLength={6}
+          error={errors.weight}
+        />
+        <Field
+          style={{ flex: 1 }}
+          label="Altura (cm)"
+          value={height}
+          onChangeText={(t) => {
+            setHeight(t.replace(/\D/g, ''));
+            setErrors((e) => ({ ...e, height: undefined }));
+          }}
+          placeholder="178"
+          keyboardType="number-pad"
+          maxLength={3}
+          error={errors.height}
+        />
+      </View>
+      <View style={styles.row}>
+        <Field
+          style={{ flex: 1 }}
+          label="Nascimento"
+          value={birth}
+          onChangeText={(t) => {
+            setBirth(maskDate(t));
+            setErrors((e) => ({ ...e, birth: undefined }));
+          }}
+          placeholder="dd/mm/aaaa"
+          keyboardType="number-pad"
+          maxLength={10}
+          error={errors.birth}
+        />
+        <View style={{ flex: 1, gap: 8 }}>
+          <T variant="label">Sexo</T>
+          <View style={styles.sexSegment}>
+            {(['MALE', 'FEMALE'] as const).map((v) => (
+              <Pressable
+                key={v}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: sex === v }}
+                onPress={() => setSex(v)}
+                style={[styles.sexItem, sex === v && { backgroundColor: colors.accent }]}
+              >
+                <Text style={[styles.sexText, sex === v && { color: colors.onAccent, fontFamily: fonts.extrabold }]}>
+                  {v === 'MALE' ? 'Masc.' : 'Fem.'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </View>
+      <T variant="caption" style={{ marginTop: -8 }}>Ao mudar o peso, o valor de hoje entra no seu histórico.</T>
 
-      <Section title="Metas de nutrição">
+      <View style={{ gap: 8 }}>
+        <T variant="label">Nível de atividade</T>
+        <View style={styles.levels}>
+          {ACTIVITY_LEVELS.map((l) => (
+            <Chip key={l.value} label={l.label} tone="accent" active={level === l.value} onPress={() => setLevel(l.value)} />
+          ))}
+        </View>
+        {level ? <T variant="caption">{ACTIVITY_LEVELS.find((l) => l.value === level)?.description}</T> : null}
+      </View>
+
+      <Section title="Metas de nutrição" action="Calcular metas" onAction={() => router.push('/metabolismo')}>
         {goals.error && !goals.data ? <ErrorBanner message={goals.error.message} onRetry={goals.reload} /> : null}
         {goals.loading && !goals.data ? <SkeletonList rows={1} /> : null}
         {goals.data ? (
@@ -297,50 +334,6 @@ export default function EditarPerfilScreen() {
             ))}
           </View>
         ) : null}
-      </Section>
-
-      <Section title="Alterar senha">
-        <Field
-          label="Senha atual"
-          value={currentPassword}
-          onChangeText={(t) => {
-            setCurrentPassword(t);
-            setPwErrors((e) => ({ ...e, current: undefined }));
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="current-password"
-          textContentType="password"
-          error={pwErrors.current}
-        />
-        <Field
-          label="Nova senha"
-          value={newPassword}
-          onChangeText={(t) => {
-            setNewPassword(t);
-            setPwErrors((e) => ({ ...e, next: undefined }));
-          }}
-          placeholder="Mínimo de 8 caracteres"
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="new-password"
-          textContentType="newPassword"
-          maxLength={72}
-          error={pwErrors.next}
-        />
-        <Field
-          label="Confirmar nova senha"
-          value={confirmPassword}
-          onChangeText={(t) => {
-            setConfirmPassword(t);
-            setPwErrors((e) => ({ ...e, confirm: undefined }));
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-          maxLength={72}
-          error={pwErrors.confirm}
-        />
-        <Button title="Alterar senha" variant="secondary" icon="lock" onPress={changePassword} loading={pwPending} />
       </Section>
 
       <View style={styles.danger}>
@@ -378,6 +371,20 @@ const styles = StyleSheet.create({
   removePhoto: { paddingVertical: 6, minHeight: 32, justifyContent: 'center' },
   removePhotoText: { fontFamily: fonts.bold, fontSize: 13, color: colors.danger },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  row: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  levels: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sexSegment: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderInput,
+  },
+  sexItem: { flex: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  sexText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.textSoft },
   gridItem: { width: '48%', flexGrow: 1 },
   danger: {
     gap: 10,

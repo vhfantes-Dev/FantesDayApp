@@ -46,7 +46,7 @@ export const EQUIPMENT_LABELS: Record<string, string> = {
   BARBELL: 'Barra',
   DUMBBELL: 'Halteres',
   MACHINE: 'Máquina',
-  CABLE: 'Cabo',
+  CABLE: 'Polia',
   BODYWEIGHT: 'Peso corporal',
 };
 

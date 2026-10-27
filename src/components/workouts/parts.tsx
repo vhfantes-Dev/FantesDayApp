@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { workoutApi } from '@/api/endpoints';
 import type { Workout, WorkoutSet } from '@/api/types';
@@ -26,6 +27,7 @@ import { formatDecimal, formatNumber, parseIsoDate, parseNumber, weekdayShort } 
 export const STREAK = { bg: '#221A10', border: '#4A3216', text: '#FFB25B', flame: '#FF8A3D', soft: '#C9B39A' };
 export const GOLD = { color: '#F2C14E', bg: '#221D10', border: '#5A4718' };
 export const DONE_ROW = '#16201A';
+export const ACCENT_BORDER = '#3A4A26';
 
 export function ExerciseThumb({ uri, size = 64, icon = 'dumbbell' }: { uri?: string | null; size?: number; icon?: IconName }) {
   const [failed, setFailed] = useState(false);
@@ -49,9 +51,35 @@ export function StreakPill({ days, active, onPress }: { days: number; active: bo
       onPress={onPress}
       style={({ pressed }) => [s.streakPill, !active && { opacity: 0.6 }, pressed && { opacity: 0.8 }]}
     >
-      <Icon name="flame" size={20} color={STREAK.flame} fill={active ? STREAK.flame : 'none'} />
+      <FlameIcon size={22} dim={!active} />
       <Text style={s.streakText}>{days}</Text>
     </Pressable>
+  );
+}
+
+// Chama em degradê do design (laranja → amarelo).
+export function FlameIcon({ size = 22, dim }: { size?: number; dim?: boolean }) {
+  return (
+    <Svg width={size} height={(size * 120) / 100} viewBox="0 0 100 120" opacity={dim ? 0.5 : 1}>
+      <Defs>
+        <LinearGradient id="flameOuter" x1="0" y1="1" x2="0" y2="0">
+          <Stop offset="0" stopColor="#FF3D1F" />
+          <Stop offset="1" stopColor="#FFB03B" />
+        </LinearGradient>
+        <LinearGradient id="flameInner" x1="0" y1="1" x2="0" y2="0">
+          <Stop offset="0" stopColor="#FFC24D" />
+          <Stop offset="1" stopColor="#FFFBEA" />
+        </LinearGradient>
+      </Defs>
+      <Path
+        d="M50 4 C58 22 80 36 82 64 C84 92 68 112 50 112 C32 112 16 92 18 64 C20 46 32 38 36 22 C40 34 42 40 44 46 C46 30 50 20 50 4 Z"
+        fill="url(#flameOuter)"
+      />
+      <Path
+        d="M50 50 C56 64 66 74 66 88 C66 101 59 108 50 108 C41 108 34 101 34 90 C34 80 41 74 44 66 C46 74 48 78 49 82 C50 72 51 62 50 50 Z"
+        fill="url(#flameInner)"
+      />
+    </Svg>
   );
 }
 
@@ -91,11 +119,13 @@ export function Segmented<V extends string>({
   value,
   onChange,
   label,
+  activeColor = colors.accent,
 }: {
   options: { value: V; label: string }[];
   value: V;
   onChange: (v: V) => void;
   label?: string;
+  activeColor?: string;
 }) {
   return (
     <View style={s.segment} accessibilityRole="radiogroup" accessibilityLabel={label}>
@@ -107,7 +137,7 @@ export function Segmented<V extends string>({
             accessibilityRole="radio"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(o.value)}
-            style={[s.segmentItem, active && { backgroundColor: colors.accent }]}
+            style={[s.segmentItem, active && { backgroundColor: activeColor }]}
           >
             <Text style={[s.segmentText, active && { color: colors.onAccent, fontFamily: fonts.extrabold }]} numberOfLines={1}>
               {o.label}
@@ -188,11 +218,15 @@ export function WorkoutRow({ workout, subtitle, onPress, faded }: { workout: Wor
 }
 
 // Botão de atalho (Histórico / Atividades / Exercícios).
-export function ShortcutTile({ label, onPress, icon }: { label: string; onPress: () => void; icon?: IconName }) {
+export function ShortcutTile({ label, onPress, icon, accent }: { label: string; onPress: () => void; icon?: IconName; accent?: boolean }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [s.shortcut, pressed && { opacity: 0.8 }]}>
-      {icon ? <Icon name={icon} size={16} color={colors.textSoft} /> : null}
-      <Text style={s.shortcutText}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [s.shortcut, accent && { backgroundColor: colors.accentSoft, borderColor: ACCENT_BORDER }, pressed && { opacity: 0.8 }]}
+    >
+      {icon ? <Icon name={icon} size={16} color={accent ? colors.accent : colors.textSoft} /> : null}
+      <Text style={[s.shortcutText, accent && { color: colors.accent, fontFamily: fonts.extrabold }]}>{label}</Text>
     </Pressable>
   );
 }

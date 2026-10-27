@@ -36,6 +36,9 @@ export default function HistoricoExercicioScreen() {
         <IconButton icon="back" label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace('/rank/exercicios'))} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={styles.title} numberOfLines={2}>{exercise?.name ?? 'Evolução'}</Text>
+          {exercise?.nameEn && exercise.nameEn.trim().toLowerCase() !== exercise.name.trim().toLowerCase() ? (
+            <T variant="caption" color={colors.textDone} style={{ fontSize: 11 }}>{exercise.nameEn}</T>
+          ) : null}
           {subtitle ? <T variant="caption">{subtitle}</T> : null}
         </View>
       </View>

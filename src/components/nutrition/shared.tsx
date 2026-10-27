@@ -39,6 +39,7 @@ const SOURCE_TAGS: Record<CatalogSource, { label: string; tone: 'info' | 'warn' 
   OPEN_FOOD_FACTS: { label: 'OPEN FOOD FACTS', tone: 'warn' },
   CUSTOM: { label: 'MANUAL', tone: 'neutral' },
   FREE_EXERCISE_DB: { label: 'CATÁLOGO', tone: 'neutral' },
+  WGER: { label: 'WGER', tone: 'neutral' },
 };
 
 export function SourceTag({ source }: { source: CatalogSource }) {
@@ -116,18 +117,31 @@ export function Segmented<V extends string>({
 // ---------- Quantidade ----------
 
 export const QUICK_PORTIONS = [50, 100, 150, 200];
+export const QUICK_PORTIONS_ML = [200, 250, 300, 500];
+
+export function portionsFor(unit: string | null | undefined) {
+  return unit === 'ml' ? QUICK_PORTIONS_ML : QUICK_PORTIONS;
+}
+
+// Gramas usados no cálculo: ml × densidade (1 g/ml quando não informada).
+export function toGrams(quantity: number, unit: string | null | undefined, density: number | null | undefined) {
+  return unit === 'ml' ? quantity * (density || 1) : quantity;
+}
 
 export function QuantityStepper({
   value,
   onChange,
   unit = 'g',
   step = 10,
+  portions,
 }: {
   value: number;
   onChange: (v: number) => void;
   unit?: string;
   step?: number;
+  portions?: number[];
 }) {
+  const quick = portions ?? portionsFor(unit);
   return (
     <View style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -148,7 +162,7 @@ export function QuantityStepper({
             }}
             keyboardType="number-pad"
             selectionColor={colors.accent}
-            accessibilityLabel="Quantidade em gramas"
+            accessibilityLabel={unit === 'ml' ? 'Quantidade em mililitros' : 'Quantidade em gramas'}
             style={styles.qtyInput}
             maxLength={4}
           />
@@ -164,7 +178,7 @@ export function QuantityStepper({
         </Pressable>
       </View>
       <View style={{ flexDirection: 'row', gap: 6 }} accessibilityLabel="Porções rápidas">
-        {QUICK_PORTIONS.map((p) => {
+        {quick.map((p) => {
           const active = value === p;
           return (
             <Pressable

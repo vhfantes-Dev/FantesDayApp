@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
-import { trackingApi, userApi } from '@/api/endpoints';
+import { goalApi, trackingApi, userApi, workoutApi } from '@/api/endpoints';
 import { useAuth } from '@/auth/AuthContext';
 import { UserPhoto, useDeleteAccount } from '@/components/conta/UserPhoto';
 import { useToast } from '@/components/Toast';
@@ -25,11 +25,13 @@ export default function PerfilScreen() {
 
   const { data, error, loading, refreshing, refresh, reload, setData } = useApi(
     async () => {
-      const [progress, weights] = await Promise.all([
+      const [progress, weights, goals, workouts] = await Promise.all([
         userApi.progress(userId),
         trackingApi.weights(userId).catch(() => null),
+        goalApi.get(userId).catch(() => null),
+        workoutApi.list(userId).then((w) => w.length).catch(() => null),
       ]);
-      return { progress, weights };
+      return { progress, weights, goals, workouts };
     },
     [userId],
     { enabled: !!user },
@@ -115,10 +117,9 @@ export default function PerfilScreen() {
           <StatBox value={formatNumber(progress.totalXp)} label="XP total" />
           <StatBox value={String(100 - inLevel)} label={`XP p/ nível ${progress.level + 1}`} />
           <StatBox
-            value={weight ? formatDecimal(weight) : '–'}
-            unit={weight ? 'kg' : undefined}
-            label="peso atual"
-            onPress={() => router.push('/perfil/editar')}
+            value={data?.workouts === null || data?.workouts === undefined ? '–' : formatNumber(data.workouts)}
+            label={data?.workouts === 1 ? 'treino' : 'treinos'}
+            onPress={() => router.push('/treinos/historico')}
           />
         </View>
       ) : null}
@@ -150,13 +151,26 @@ export default function PerfilScreen() {
             }
           />
         ) : null}
-        <ListRow icon="user" title="Editar perfil" subtitle="Nome, peso, metas e foto" onPress={() => router.push('/perfil/editar')} />
+        <ListRow
+          icon="flame"
+          iconColor={colors.carbs}
+          title="Metabolismo e metas"
+          value={data?.goals?.dailyCalories ? `${formatNumber(data.goals.dailyCalories)} kcal` : undefined}
+          onPress={() => router.push('/metabolismo')}
+        />
+        <ListRow
+          icon="scale"
+          iconColor={colors.protein}
+          title="Peso corporal"
+          value={weight ? `${formatDecimal(weight)} kg` : undefined}
+          onPress={() => router.push('/peso')}
+        />
+        <ListRow icon="user" title="Editar perfil" subtitle="Nome, corpo, metas e foto" onPress={() => router.push('/perfil/editar')} />
         <ListRow icon="trophy" title="Rank de força" onPress={() => router.push('/rank')} />
         <ListRow icon="podium" title="Ranking" onPress={() => router.push('/ranking')} />
         <ListRow icon="pulse" title="Atividades" onPress={() => router.push('/atividades')} />
         <ListRow icon="history" title="Histórico de treinos" onPress={() => router.push('/treinos/historico')} />
-        <ListRow icon="dumbbell" title="Catálogo de exercícios" onPress={() => router.push('/exercicios')} />
-        <ListRow icon="lock" title="Alterar senha" onPress={() => router.push('/perfil/editar')} />
+        <ListRow icon="lock" title="Alterar senha" onPress={() => router.push('/perfil/senha')} />
         <ListRow
           icon="logout"
           title={signingOut ? 'Saindo…' : 'Sair'}

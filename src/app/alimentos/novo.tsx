@@ -4,15 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { foodApi } from '@/api/endpoints';
 import type { Food, FoodRequest } from '@/api/types';
-import { NumberField, Segmented } from '@/components/nutrition/shared';
+import { NumberField } from '@/components/nutrition/shared';
 import { useToast } from '@/components/Toast';
-import { Button, Card, ErrorBanner, Field, IconButton, LoadingView, Screen } from '@/components/ui';
+import { Button, Card, ErrorBanner, Field, IconButton, LoadingView, Screen, T, Toggle } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
 import { parseNumber } from '@/utils/format';
 
-type Unit = 'g' | 'ml' | 'unidade';
-type NumKey = 'kcal' | 'protein' | 'carbs' | 'fat' | 'fiber';
+type NumKey = 'kcal' | 'protein' | 'carbs' | 'fat' | 'fiber' | 'density';
 type Errors = Partial<Record<NumKey | 'name', string>>;
 
 function toText(n: number | null | undefined) {
@@ -31,8 +30,8 @@ export default function NovoAlimentoScreen() {
   const existing = useApi(() => foodApi.get(editId!), [editId], { enabled: editId !== null });
 
   const [name, setName] = useState('');
-  const [unit, setUnit] = useState<Unit>('g');
-  const [nums, setNums] = useState<Record<NumKey, string>>({ kcal: '', protein: '', carbs: '', fat: '', fiber: '' });
+  const [liquid, setLiquid] = useState(false);
+  const [nums, setNums] = useState<Record<NumKey, string>>({ kcal: '', protein: '', carbs: '', fat: '', fiber: '', density: '' });
   const [errors, setErrors] = useState<Errors>({});
   const [saving, setSaving] = useState(false);
   const [loadedFor, setLoadedFor] = useState<number | null>(null);
@@ -46,13 +45,14 @@ export default function NovoAlimentoScreen() {
 
   function fill(f: Food) {
     setName(f.name);
-    setUnit(f.defaultUnit === 'ml' || f.defaultUnit === 'unidade' ? f.defaultUnit : 'g');
+    setLiquid(f.liquid || f.defaultUnit === 'ml');
     setNums({
       kcal: toText(f.caloriesPer100g),
       protein: toText(f.proteinPer100g),
       carbs: toText(f.carbsPer100g),
       fat: toText(f.fatPer100g),
       fiber: toText(f.fiberPer100g),
+      density: toText(f.densityGPerMl),
     });
   }
 
@@ -70,6 +70,7 @@ export default function NovoAlimentoScreen() {
     const values: Partial<Record<NumKey, number>> = {};
     (Object.keys(nums) as NumKey[]).forEach((k) => {
       const raw = nums[k].trim();
+      if (k === 'density' && !liquid) return;
       if (!raw) {
         if (k === 'kcal') e.kcal = 'Informe as calorias.';
         return;
@@ -77,7 +78,8 @@ export default function NovoAlimentoScreen() {
       const n = parseNumber(raw);
       if (n === undefined || n < 0) e[k] = 'Valor inválido.';
       else if (k === 'kcal' && n > 900) e.kcal = 'Máximo de 900 kcal por 100 g.';
-      else if (k !== 'kcal' && n > 100) e[k] = 'Máximo de 100 g.';
+      else if (k === 'density' && (n < 0.3 || n > 2.5)) e.density = 'Use um valor entre 0,3 e 2,5 g/ml.';
+      else if (k !== 'kcal' && k !== 'density' && n > 100) e[k] = 'Máximo de 100 g.';
       else values[k] = n;
     });
     const macroSum = (values.protein ?? 0) + (values.carbs ?? 0) + (values.fat ?? 0);
@@ -87,7 +89,9 @@ export default function NovoAlimentoScreen() {
     if (Object.values(e).some(Boolean)) return null;
     return {
       name: trimmed,
-      defaultUnit: unit,
+      defaultUnit: liquid ? 'ml' : 'g',
+      liquid,
+      ...(liquid && values.density !== undefined ? { densityGPerMl: values.density } : {}),
       caloriesPer100g: values.kcal,
       proteinPer100g: values.protein ?? 0,
       carbsPer100g: values.carbs ?? 0,
@@ -145,20 +149,31 @@ export default function NovoAlimentoScreen() {
             autoCapitalize="sentences"
           />
 
-          <View style={{ gap: 8 }}>
-            <Text style={styles.label}>Unidade padrão</Text>
-            <Segmented
-              label="Unidade padrão"
-              tone="accent"
-              value={unit}
-              onChange={setUnit}
-              options={[
-                { value: 'g', label: 'g' },
-                { value: 'ml', label: 'ml' },
-                { value: 'unidade', label: 'unidade' },
-              ]}
-            />
-          </View>
+          <Card style={styles.card}>
+            <View style={styles.toggleRow}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.cardTitle}>Líquido</Text>
+                <T variant="caption">Sucos, leites, óleos, bebidas… Medido em ml por padrão.</T>
+              </View>
+              <Toggle
+                label="Líquido"
+                value={liquid}
+                onChange={(v) => {
+                  setLiquid(v);
+                  setErrors((e) => ({ ...e, density: undefined }));
+                }}
+              />
+            </View>
+            {liquid ? (
+              <NumberField
+                label="Densidade (g/ml) · opcional"
+                value={nums.density}
+                onChangeText={(t) => setNum('density', t)}
+                placeholder="1,0"
+                error={errors.density}
+              />
+            ) : null}
+          </Card>
 
           <Card style={styles.card}>
             <Text style={styles.cardTitle}>Informação nutricional por 100 g</Text>
@@ -185,5 +200,6 @@ const styles = StyleSheet.create({
   card: { gap: 12, borderRadius: 22 },
   cardTitle: { fontFamily: fonts.bold, fontSize: 13, color: colors.text },
   grid: { flexDirection: 'row', gap: 10 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cell: { flex: 1 },
 });

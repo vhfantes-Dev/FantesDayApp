@@ -7,7 +7,7 @@ import { exerciseApi, routineApi, workoutApi } from '@/api/endpoints';
 import { useAuth } from '@/auth/AuthContext';
 import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
-import { Button, ErrorBanner, Field, Header, IconButton, LoadingView, Screen, T } from '@/components/ui';
+import { Button, ErrorBanner, Field, Header, IconButton, LoadingView, Screen, T, Tag } from '@/components/ui';
 import { categoryLabel, equipmentLabel, levelLabel, sourceLabel } from '@/components/workouts/labels';
 import { Stepper } from '@/components/workouts/parts';
 import { useApi } from '@/hooks/useApi';
@@ -139,7 +139,12 @@ export default function ExercicioScreen() {
 
       <View style={styles.body}>
         <View style={{ gap: 10 }}>
-          <Text style={styles.title}>{data.name}</Text>
+          <View style={{ gap: 4 }}>
+            <Text style={styles.title}>{data.name}</Text>
+            {data.nameEn && data.nameEn.toLowerCase() !== data.name.toLowerCase() ? (
+              <T variant="caption" style={{ fontSize: 13 }}>{data.nameEn}</T>
+            ) : null}
+          </View>
           <View style={styles.tags}>
             {data.muscleGroup ? (
               <View style={[styles.pill, { backgroundColor: colors.accent }]}>
@@ -157,11 +162,14 @@ export default function ExercicioScreen() {
               </View>
             ) : null}
           </View>
-          <T variant="caption">{sourceLabel(data.source)}{data.source === 'CUSTOM' && isOwner ? ' · criado por você' : ''}</T>
+          <T variant="caption">Fonte: {sourceLabel(data.source)}{data.source === 'CUSTOM' && isOwner ? ' · criado por você' : ''}</T>
         </View>
 
         <View style={{ gap: 10 }}>
-          <Text style={styles.overline}>COMO FAZER</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <Text style={styles.overline}>COMO FAZER</Text>
+            {data.instructionsLanguage === 'en' && steps.length > 0 ? <Tag label="Instruções em inglês" tone="neutral" /> : null}
+          </View>
           {steps.length === 0 ? (
             <T variant="caption" style={{ fontSize: 14 }}>Sem instruções cadastradas.</T>
           ) : (

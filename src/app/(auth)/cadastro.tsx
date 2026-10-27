@@ -2,22 +2,19 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Sex } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
+import { markOnboardingPending, clearOnboardingPending } from '@/components/conta/onboardingFlag';
 import { Icon } from '@/components/Icon';
-import { Button, Chip, ErrorBanner, Field, IconButton, Screen, T, Toggle } from '@/components/ui';
+import { Button, ErrorBanner, Field, IconButton, Screen, T, Toggle } from '@/components/ui';
 import { colors, fonts } from '@/theme';
-import { parseNumber } from '@/utils/format';
 
-type Errors = Partial<Record<'name' | 'email' | 'password' | 'weight', string>>;
+type Errors = Partial<Record<'name' | 'email' | 'password', string>>;
 
 export default function CadastroScreen() {
   const { signUp, biometricAvailable } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [weight, setWeight] = useState('');
-  const [sex, setSex] = useState<Sex | null>(null);
   const [faceId, setFaceId] = useState(true);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -32,23 +29,22 @@ export default function CadastroScreen() {
     if (!name.trim()) next.name = 'Informe seu nome.';
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = 'Informe um e-mail válido.';
     if (password.length < 8 || password.length > 72) next.password = 'A senha precisa ter de 8 a 72 caracteres.';
-    const kg = parseNumber(weight);
-    if (weight.trim() && (kg === undefined || kg < 20 || kg > 400)) next.weight = 'Peso inválido (20 a 400 kg).';
     setErrors(next);
     setFormError(null);
     if (Object.keys(next).length) return;
 
     setPending(true);
+    // Depois do cadastro o app abre o onboarding (sexo, nascimento, altura, peso e atividade).
+    markOnboardingPending();
     try {
       await signUp({
         name: name.trim(),
         email: email.trim(),
         password,
-        bodyweightKg: kg,
-        sex: sex ?? undefined,
         enableBiometric: biometricAvailable && faceId,
       });
     } catch (e) {
+      clearOnboardingPending();
       const message = e instanceof Error ? e.message : 'Algo deu errado. Tente de novo.';
       if (/e-?mail/i.test(message)) setErrors((er) => ({ ...er, email: message.replace('ja ', 'já ') }));
       else if (/senha/i.test(message)) setErrors((er) => ({ ...er, password: message }));
@@ -118,34 +114,6 @@ export default function CadastroScreen() {
             error={errors.password}
           />
 
-          <View style={styles.optional}>
-            <View style={{ gap: 4 }}>
-              <T style={{ fontFamily: fonts.bold, fontSize: 14 }}>Para o rank de força (opcional)</T>
-              <T variant="caption" style={{ lineHeight: 18 }}>
-                O rank compara suas cargas com o seu peso corporal e sexo. Dá para preencher depois no perfil.
-              </T>
-            </View>
-            <Field
-              label="Peso (kg)"
-              value={weight}
-              onChangeText={(t) => {
-                setWeight(t.replace(/[^\d.,]/g, ''));
-                clear('weight');
-              }}
-              placeholder="Ex: 78,5"
-              keyboardType="decimal-pad"
-              maxLength={6}
-              error={errors.weight}
-            />
-            <View style={{ gap: 8 }}>
-              <T variant="label">Sexo</T>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Chip label="Masculino" tone="accent" active={sex === 'MALE'} onPress={() => setSex(sex === 'MALE' ? null : 'MALE')} />
-                <Chip label="Feminino" tone="accent" active={sex === 'FEMALE'} onPress={() => setSex(sex === 'FEMALE' ? null : 'FEMALE')} />
-              </View>
-            </View>
-          </View>
-
           {biometricAvailable ? (
             <View style={styles.faceId}>
               <Icon name="faceId" size={24} color={colors.accent} />
@@ -178,14 +146,6 @@ export default function CadastroScreen() {
 
 const styles = StyleSheet.create({
   lead: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.textMuted },
-  optional: {
-    gap: 14,
-    padding: 16,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   faceId: {
     flexDirection: 'row',
     alignItems: 'center',

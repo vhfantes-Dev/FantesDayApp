@@ -100,6 +100,7 @@ function RankedCard({ item, rank }: { item: Item; rank: ExerciseRank }) {
         <RankBadge rank={r.rank} size={44} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={styles.name} numberOfLines={2}>{item.exercise.name}</Text>
+          <OriginalName exercise={item.exercise} />
           <T variant="caption">{subtitle}</T>
         </View>
         <Text style={[styles.score, { color: info.color }]}>{r.score}</Text>
@@ -109,6 +110,16 @@ function RankedCard({ item, rank }: { item: Item; rank: ExerciseRank }) {
         {hint}
       </T>
     </Card>
+  );
+}
+
+// Nome original (inglês) quando difere do nome em português.
+function OriginalName({ exercise }: { exercise: Exercise }) {
+  if (!exercise.nameEn || exercise.nameEn.trim().toLowerCase() === exercise.name.trim().toLowerCase()) return null;
+  return (
+    <Text style={styles.nameEn} numberOfLines={1}>
+      {exercise.nameEn}
+    </Text>
   );
 }
 
@@ -122,6 +133,7 @@ function LockedCard({ item }: { item: Item }) {
       <RankBadge rank={null} size={44} locked />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[styles.name, { fontFamily: fonts.bold, color: colors.textSoft }]} numberOfLines={2}>{item.exercise.name}</Text>
+        <OriginalName exercise={item.exercise} />
         <T variant="caption">
           {item.exercise.muscleGroup ? `${item.exercise.muscleGroup} · ` : ''}Sem séries ainda · registre 1 para ganhar rank
         </T>
@@ -133,6 +145,7 @@ function LockedCard({ item }: { item: Item }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   name: { fontFamily: fonts.extrabold, fontSize: 14, color: colors.text },
+  nameEn: { fontFamily: fonts.medium, fontSize: 11, color: colors.textDone },
   score: { fontFamily: fonts.title, fontSize: 15 },
   locked: {
     flexDirection: 'row',

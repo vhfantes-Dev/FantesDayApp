@@ -23,6 +23,7 @@ import {
 } from '@/components/ui';
 import { sortWorkouts } from '@/components/workouts/labels';
 import { registerStartedWorkout } from '@/components/workouts/session';
+import { nextRoutine, routineMeta } from '@/components/workouts/routines';
 import { ShortcutTile, STREAK, StreakPill, WorkoutRow } from '@/components/workouts/parts';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts, radius } from '@/theme';
@@ -112,7 +113,7 @@ export default function TreinosScreen() {
             >
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.startTitle}>Começar treino</Text>
-                <Text style={styles.startSub} numberOfLines={1}>{next.name}</Text>
+                <Text style={styles.startSub} numberOfLines={1}>{startSubtitle(next, data.routines)}</Text>
               </View>
               <View style={styles.startIcon}>
                 {starting === next.id ? <ActivityIndicator color={colors.accent} /> : <Icon name="play" size={18} color={colors.accent} fill={colors.accent} />}
@@ -131,14 +132,14 @@ export default function TreinosScreen() {
             </Card>
           ) : null}
 
-          <Section title="Minhas rotinas" action="Nova rotina" onAction={() => router.push({ pathname: '/treinos/novo', params: { modo: 'rotina' } })}>
+          <Section title="Minhas rotinas" action={data.routines.length ? 'Ver todas' : 'Nova rotina'} onAction={() => (data.routines.length ? router.push('/rotinas') : router.push({ pathname: '/treinos/novo', params: { modo: 'rotina' } }))}>
             {data.routines.length === 0 ? (
               <EmptyState
                 icon="dumbbell"
                 title="Nenhuma rotina ainda"
                 message="Gere rotinas pelo seu objetivo ou monte a sua do zero."
                 action="Gerar rotinas"
-                onAction={() => router.push({ pathname: '/treinos/novo', params: { modo: 'gerar' } })}
+                onAction={() => router.push('/rotinas/gerar')}
               />
             ) : (
               <View style={{ gap: 10 }}>
@@ -199,7 +200,7 @@ export default function TreinosScreen() {
           <View style={styles.shortcuts}>
             <ShortcutTile label="Histórico" onPress={() => router.push('/treinos/historico')} />
             <ShortcutTile label="Atividades" onPress={() => router.push('/atividades')} />
-            <ShortcutTile label="Exercícios" onPress={() => router.push('/exercicios')} />
+            <ShortcutTile label="Rotinas" accent onPress={() => router.push('/rotinas')} />
           </View>
         </>
       ) : null}
@@ -207,15 +208,11 @@ export default function TreinosScreen() {
   );
 }
 
-// Próxima rotina: a seguinte à última usada (pelo nome do treino), ou a primeira.
-function nextRoutine(routines: Routine[], workouts: Workout[]) {
-  const usable = routines.filter((r) => r.id && r.exercises.length > 0);
-  if (!usable.length) return null;
-  for (const w of workouts) {
-    const idx = usable.findIndex((r) => r.name === w.workoutType);
-    if (idx >= 0) return usable[(idx + 1) % usable.length];
-  }
-  return usable[0];
+// "Treino A · Push · 5 exercícios"
+function startSubtitle(routine: Routine, all: Routine[]) {
+  const meta = routineMeta(routine, Math.max(0, all.indexOf(routine)));
+  const label = /^Treino\s+[A-Z]/i.test(routine.name) ? `Treino ${meta.letter} · ${meta.title}` : routine.name;
+  return `${label} · ${meta.exercises} ${meta.exercises === 1 ? 'exercício' : 'exercícios'}`;
 }
 
 function RankCard({ profile }: { profile: StrengthProfile | null }) {

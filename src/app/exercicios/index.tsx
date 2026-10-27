@@ -225,12 +225,18 @@ function ExerciseRow({
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
       <ExerciseThumb uri={ex.imageUrl} size={64} />
       <View style={{ flex: 1, gap: 6 }}>
-        <Text style={styles.name} numberOfLines={2}>{ex.name}</Text>
+        <View style={{ gap: 2 }}>
+          <Text style={styles.name} numberOfLines={2}>{ex.name}</Text>
+          {ex.nameEn && ex.nameEn.toLowerCase() !== ex.name.toLowerCase() ? (
+            <T variant="caption" color={colors.textDone} numberOfLines={1} style={{ fontSize: 11 }}>{ex.nameEn}</T>
+          ) : null}
+        </View>
         {ex.muscleGroup ? <T variant="caption" numberOfLines={1}>{ex.muscleGroup}</T> : null}
         <View style={styles.tags}>
           {equipment ? <Tag label={equipment} /> : null}
           {level ? <Tag label={level} tone={levelTone(ex.level)} /> : null}
           {ex.source === 'CUSTOM' ? <Tag label="Personalizado" tone="info" /> : null}
+          {ex.source === 'WGER' ? <Tag label="wger" tone="done" /> : null}
         </View>
       </View>
       {picking ? (

@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { Icon } from '@/components/Icon';
+import { AppIcon } from '@/components/Logo';
 import { Button, ErrorBanner, Field, Screen, T } from '@/components/ui';
 import { colors, fonts } from '@/theme';
 
@@ -63,9 +64,7 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen glow="topLeft" contentStyle={styles.content}>
         <View style={{ gap: 20 }}>
-          <View style={styles.logo}>
-            <Icon name="sun" size={34} color={colors.onAccent} strokeWidth={2.2} />
-          </View>
+          <AppIcon size={64} />
           <View style={{ gap: 10 }}>
             <T variant="display">FantesDay</T>
             <T style={styles.tagline}>Hábitos, treinos e alimentação.{'\n'}Seu dia, nível por nível.</T>
@@ -119,7 +118,7 @@ export default function LoginScreen() {
           />
           <Link href="/esqueci-senha" asChild>
             <Pressable accessibilityRole="link" hitSlop={8} style={styles.forgot}>
-              <Text style={styles.link}>Esqueci a senha</Text>
+              <Text style={styles.link}>Esqueci minha senha</Text>
             </Pressable>
           </Link>
           <Button title="Entrar" onPress={submit} loading={pending} disabled={bioPending} style={{ marginTop: 4 }} />
@@ -156,19 +155,11 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 24, paddingTop: 88, gap: 40, flexGrow: 1 },
-  logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  content: { paddingHorizontal: 24, paddingTop: 88, gap: 30, flexGrow: 1 },
   tagline: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.textMuted },
   eye: { minHeight: 44, justifyContent: 'center' },
   eyeText: { fontFamily: fonts.bold, fontSize: 12, color: colors.textMuted },
-  forgot: { alignSelf: 'flex-end', paddingVertical: 4 },
+  forgot: { alignSelf: 'flex-end', paddingVertical: 6, marginTop: -6 },
   link: { fontFamily: fonts.bold, fontSize: 13, color: colors.accent },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: -12 },
   line: { flex: 1, height: 1, backgroundColor: colors.border },

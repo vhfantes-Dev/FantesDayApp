@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { activityApi } from '@/api/endpoints';
 import type { Activity } from '@/api/types';
@@ -71,7 +72,22 @@ export default function AtividadesScreen() {
       contentStyle={{ paddingBottom: insets.bottom + 110 }}
       overlay={<Fab title="Nova atividade" onPress={() => router.push('/atividades/nova')} bottom={insets.bottom + 24} />}
     >
-      <Header title="Atividades" />
+      <Header
+        title="Atividades"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Importar atividades de app de saúde"
+            onPress={() => router.push('/atividades/importar')}
+            style={({ pressed }) => [styles.importButton, pressed && { opacity: 0.8 }]}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.fat} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+            </Svg>
+            <Text style={styles.importText}>Importar</Text>
+          </Pressable>
+        }
+      />
 
       {error && !data ? <ErrorBanner message={error.message} onRetry={reload} /> : null}
       {loading && !data ? <SkeletonList rows={4} /> : null}
@@ -96,7 +112,7 @@ export default function AtividadesScreen() {
             <EmptyState
               icon="pulse"
               title="Nenhuma atividade ainda"
-              message="Registre corridas, caminhadas e pedaladas. Cada 2 minutos rendem 1 XP."
+              message="Registre corridas, caminhadas e pedaladas, ou importe do seu app de saúde. Cada 2 minutos rendem 1 XP."
               action="Registrar atividade"
               onAction={() => router.push('/atividades/nova')}
             />
@@ -157,6 +173,18 @@ function ActivityRow({ activity, showDate }: { activity: Activity; showDate: boo
 
 const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: 10 },
+  importButton: {
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#4A2236',
+    backgroundColor: colors.fatSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  importText: { fontFamily: fonts.extrabold, fontSize: 13, color: colors.fat },
   stat: {
     flex: 1,
     padding: 14,

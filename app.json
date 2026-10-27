@@ -13,15 +13,14 @@
       "bundleIdentifier": "com.vhfantes.fantesday",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Use o Face ID para entrar no FantesDay sem digitar a senha."
-      }
+      },
+      "icon": "./assets/icon.png"
     },
     "android": {
       "package": "com.vhfantes.fantesday",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0C0F",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0C0F"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -46,7 +45,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 160,
+          "imageWidth": 200,
+          "resizeMode": "contain",
           "backgroundColor": "#0A0C0F"
         }
       ],

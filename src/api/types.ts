@@ -3,7 +3,10 @@
 // BigDecimal chega como number.
 
 export type Sex = 'MALE' | 'FEMALE';
-export type CatalogSource = 'TACO' | 'OPEN_FOOD_FACTS' | 'FREE_EXERCISE_DB' | 'CUSTOM';
+export type CatalogSource = 'TACO' | 'OPEN_FOOD_FACTS' | 'FREE_EXERCISE_DB' | 'WGER' | 'CUSTOM';
+export type ActivityLevel = 'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'ACTIVE' | 'VERY_ACTIVE';
+export type WeightGoal = 'LOSE' | 'MAINTAIN' | 'GAIN';
+export type FoodUnit = 'g' | 'ml';
 export type StrengthRank =
   | 'BRONZE'
   | 'SILVER'
@@ -34,6 +37,9 @@ export interface User {
   faceIdEnabled: boolean | null;
   bodyweightKg: number | null;
   sex: Sex | null;
+  heightCm: number | null;
+  birthDate: string | null;
+  activityLevel: ActivityLevel | null;
   photoUrl: string | null;
   createdAt: string;
 }
@@ -45,6 +51,27 @@ export interface UserRequest {
   faceIdEnabled?: boolean;
   bodyweightKg?: number;
   sex?: Sex;
+  heightCm?: number;
+  birthDate?: string;
+  activityLevel?: ActivityLevel;
+}
+
+// TMB, gasto diário e IMC. Os cálculos ficam null enquanto faltar dado (veja missingFields).
+export interface BodyMetrics {
+  heightCm: number | null;
+  weightKg: number | null;
+  age: number | null;
+  sex: Sex | null;
+  activityLevel: ActivityLevel | null;
+  activityFactor: number | null;
+  bmi: number | null;
+  bmiCategory: string | null;
+  bmr: number | null;
+  tdee: number | null;
+  suggestedCalories: { lose: number; maintain: number; gain: number } | null;
+  suggestedProteinG: number | null;
+  complete: boolean;
+  missingFields: string[];
 }
 
 export interface AuthResponse {
@@ -177,6 +204,17 @@ export interface Dashboard {
   water: WaterDay;
   activities: { count: number; totalMinutes: number; caloriesBurned: number };
   strengthRank: Rank | null;
+  // target = meta (ou gasto diário); remaining = target + gasto nas atividades − consumido
+  calories: {
+    target: number | null;
+    targetSource: string | null;
+    consumed: number;
+    burnedByActivities: number;
+    remaining: number | null;
+  };
+  workouts: { today: Workout[]; thisWeek: number };
+  bodyMetrics: BodyMetrics;
+  weight: { currentKg: number | null; changeLast30Days: number | null; lastEntryDate: string | null };
 }
 
 export interface Activity {
@@ -209,6 +247,8 @@ export interface Food {
   fatPer100g: number | null;
   fiberPer100g: number | null;
   defaultUnit: string | null;
+  liquid: boolean;
+  densityGPerMl: number | null;
   source: CatalogSource;
   externalId: string | null;
   createdById: number | null;
@@ -222,6 +262,8 @@ export interface FoodRequest {
   fatPer100g?: number;
   fiberPer100g?: number;
   defaultUnit?: string;
+  liquid?: boolean;
+  densityGPerMl?: number;
 }
 
 export interface ExternalFood {
@@ -249,7 +291,9 @@ export interface MealItem {
   foodId: number;
   foodName: string;
   quantity: number;
-  unit: string | null;
+  unit: FoodUnit;
+  // Quantidade usada no cálculo (ml × densidade do alimento)
+  quantityInGrams: number;
   calculatedCalories: number;
   calculatedProtein: number;
   calculatedCarbs: number;
@@ -259,7 +303,7 @@ export interface MealItem {
 export interface MealItemRequest {
   foodId?: number;
   quantity?: number;
-  unit?: string;
+  unit?: FoodUnit;
 }
 
 export interface WeightEntry {
@@ -278,7 +322,11 @@ export interface WeightHistory {
 
 export interface Exercise {
   id: number;
+  // name em português; nameEn com o nome original
   name: string;
+  nameEn: string | null;
+  // "pt" ou "en"
+  instructionsLanguage: string | null;
   muscleGroup: string | null;
   secondaryMuscles: string | null;
   equipment: string | null;
@@ -447,4 +495,22 @@ export interface ProblemDetail {
   title?: string;
   detail?: string;
   instance?: string;
+}
+
+export interface ActivityImportRequest {
+  source: string;
+  activities: {
+    externalId: string;
+    activityType: string;
+    durationMinutes: number;
+    caloriesBurned?: number;
+    date: string;
+  }[];
+}
+
+export interface ActivityImportResult {
+  imported: number;
+  skipped: number;
+  xpEarned: number;
+  activities: Activity[];
 }

@@ -1,15 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { goalApi, mealApi, trackingApi } from '@/api/endpoints';
 import type { DailyNutrition, Meal, MealItem, WaterDay } from '@/api/types';
 import { useUserId } from '@/auth/AuthContext';
 import { Icon } from '@/components/Icon';
 import { MacroInline, sumItems } from '@/components/nutrition/shared';
+import { WATER } from '@/components/nutrition/WaterGlass';
 import { useToast } from '@/components/Toast';
 import {
-  Button,
   Card,
   EmptyState,
   ErrorBanner,
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
-import { addDays, formatNumber, percent, shortDate, today, weekdayShort } from '@/utils/format';
+import { addDays, formatDecimal, formatNumber, percent, shortDate, today, weekdayShort } from '@/utils/format';
 
 interface MealWithItems {
   meal: Meal;
@@ -53,9 +54,8 @@ export default function NutricaoScreen() {
   const toast = useToast();
   const [date, setDate] = useState(today());
   const [creating, setCreating] = useState(false);
-  const [addingWater, setAddingWater] = useState<number | null>(null);
 
-  const { data, error, loading, refreshing, refresh, reload, setData } = useApi<NutritionDay>(async () => {
+  const { data, error, loading, refreshing, refresh, reload } = useApi<NutritionDay>(async () => {
     const [daily, water, meals] = await Promise.all([
       goalApi.daily(userId, date),
       trackingApi.water(userId, date),
@@ -69,31 +69,6 @@ export default function NutricaoScreen() {
 
   const isToday = date === today();
   const dataForDate = data && data.date === date ? data : undefined;
-
-  async function addWater(ml: number) {
-    setAddingWater(ml);
-    try {
-      const water = await trackingApi.addWater(userId, ml, date);
-      setData((d) => ({ ...d!, water }));
-      toast.success(`+${ml} ml de água`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Não foi possível registrar a água.');
-    } finally {
-      setAddingWater(null);
-    }
-  }
-
-  async function undoWater() {
-    const last = data?.water.entries[data.water.entries.length - 1];
-    if (!last) return;
-    try {
-      await trackingApi.removeWater(last.id);
-      const water = await trackingApi.water(userId, date);
-      setData((d) => ({ ...d!, water }));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Não foi possível desfazer.');
-    }
-  }
 
   async function createMeal() {
     setCreating(true);
@@ -163,10 +138,8 @@ export default function NutricaoScreen() {
                 <Icon name="barcode" size={18} color={colors.text} />
               </Pressable>
             </Pressable>
-            <T variant="caption" style={{ fontSize: 11, paddingLeft: 4 }}>Catálogo TACO + Open Food Facts</T>
+            <WaterRow water={dataForDate.water} onPress={() => router.push({ pathname: '/agua', params: { date } })} />
           </View>
-
-          <WaterCard water={dataForDate.water} adding={addingWater} onAdd={addWater} onUndo={undoWater} />
 
           <View style={{ gap: 10 }}>
             {dataForDate.meals.length === 0 ? (
@@ -226,40 +199,22 @@ function MacroGoal({ label, value, goal, color }: { label: string; value: number
   );
 }
 
-function WaterCard({
-  water,
-  adding,
-  onAdd,
-  onUndo,
-}: {
-  water: WaterDay;
-  adding: number | null;
-  onAdd: (ml: number) => void;
-  onUndo: () => void;
-}) {
+function liters(ml: number) {
+  return `${formatDecimal(ml / 1000, 1)} L`;
+}
+
+function WaterRow({ water, onPress }: { water: WaterDay; onPress: () => void }) {
+  const label = water.goalMl ? `Água · ${liters(water.totalMl)} de ${liters(water.goalMl)}` : `Água · ${liters(water.totalMl)}`;
   return (
-    <Card style={{ gap: 12 }}>
-      <View style={styles.waterHead}>
-        <Icon name="drop" size={22} color={colors.water} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.waterValue}>
-            {formatNumber(water.totalMl)}
-            <Text style={styles.waterUnit}>{water.goalMl ? ` / ${formatNumber(water.goalMl)} ml` : ' ml'}</Text>
-          </Text>
-          <T variant="caption" style={{ fontSize: 11 }}>Água</T>
-        </View>
-        {water.entries.length ? (
-          <Pressable accessibilityRole="button" onPress={onUndo} hitSlop={8} style={{ paddingVertical: 10 }}>
-            <T variant="label" color={colors.textMuted} style={{ fontFamily: fonts.bold }}>Desfazer</T>
-          </Pressable>
-        ) : null}
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.water, pressed && { opacity: 0.85 }]}>
+      <Svg width={18} height={22} viewBox="0 0 18 22">
+        <Path d="M9 1 C12 6 16 9 16 14 A7 7 0 0 1 2 14 C2 9 6 6 9 1 Z" fill={WATER.light} />
+      </Svg>
+      <Text style={styles.waterText} numberOfLines={1}>{label}</Text>
+      <View style={styles.waterTrack}>
+        <View style={[styles.waterFill, { width: `${percent(water.totalMl, water.goalMl)}%` }]} />
       </View>
-      <ProgressBar value={percent(water.totalMl, water.goalMl)} color={colors.water} height={6} />
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Button title="+250 ml" variant="secondary" small style={{ flex: 1 }} loading={adding === 250} disabled={adding !== null} onPress={() => onAdd(250)} />
-        <Button title="+500 ml" variant="secondary" small style={{ flex: 1 }} loading={adding === 500} disabled={adding !== null} onPress={() => onAdd(500)} />
-      </View>
-    </Card>
+    </Pressable>
   );
 }
 
@@ -317,9 +272,21 @@ const styles = StyleSheet.create({
   },
   searchText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.textMuted },
   scanBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  waterHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  waterValue: { fontFamily: fonts.title, fontSize: 17, color: colors.text },
-  waterUnit: { fontSize: 12, color: colors.textMuted },
+  water: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: WATER.card,
+    borderWidth: 1,
+    borderColor: WATER.cardBorder,
+  },
+  waterText: { flex: 1, fontFamily: fonts.bold, fontSize: 13, color: colors.text },
+  waterTrack: { width: 80, height: 6, borderRadius: 99, backgroundColor: WATER.cardBorder, overflow: 'hidden' },
+  waterFill: { height: 6, borderRadius: 99, backgroundColor: WATER.light },
   meal: { paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   mealName: { flex: 1, fontFamily: fonts.title, fontSize: 14, color: colors.text },

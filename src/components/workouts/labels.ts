@@ -2,34 +2,38 @@
 import type { CatalogSource, Workout } from '@/api/types';
 import { EQUIPMENT_LABELS } from '@/utils/ranks';
 
-const EQUIPMENT: Record<string, string> = {
+// O catálogo agora vem em português; os mapas abaixo só traduzem valores antigos em inglês.
+const EQUIPMENT_EN: Record<string, string> = {
   barbell: 'Barra',
   dumbbell: 'Halteres',
   machine: 'Máquina',
-  cable: 'Cabo',
+  cable: 'Polia',
   'body only': 'Peso corporal',
   kettlebells: 'Kettlebell',
-  bands: 'Elásticos',
+  bands: 'Elástico',
   'medicine ball': 'Medicine ball',
   'exercise ball': 'Bola suíça',
-  'foam roll': 'Rolo',
+  'foam roll': 'Rolo de espuma',
   'e-z curl bar': 'Barra W',
   other: 'Outro',
 };
 
-// Opções do cadastro de exercício (valor gravado = chave em inglês, como no catálogo).
-export const EQUIPMENT_OPTIONS = ['machine', 'barbell', 'dumbbell', 'cable', 'body only', 'kettlebells', 'bands', 'other'];
+// Opções do cadastro de exercício (valores gravados como a API usa).
+export const EQUIPMENT_OPTIONS = [
+  'Máquina', 'Barra', 'Halteres', 'Polia', 'Peso corporal', 'Kettlebell', 'Elástico', 'Barra W', 'Barra fixa',
+  'Banco', 'Medicine ball', 'Bola suíça', 'Rolo de espuma', 'Colchonete', 'Outro',
+];
 
-const LEVEL: Record<string, string> = {
+const LEVEL_EN: Record<string, string> = {
   beginner: 'Iniciante',
   intermediate: 'Intermediário',
   expert: 'Avançado',
   advanced: 'Avançado',
 };
 
-export const LEVEL_OPTIONS = ['beginner', 'intermediate', 'expert'];
+export const LEVEL_OPTIONS = ['Iniciante', 'Intermediário', 'Avançado'];
 
-const CATEGORY: Record<string, string> = {
+const CATEGORY_EN: Record<string, string> = {
   strength: 'Força',
   stretching: 'Alongamento',
   plyometrics: 'Pliometria',
@@ -39,24 +43,25 @@ const CATEGORY: Record<string, string> = {
   cardio: 'Cardio',
 };
 
+export const DEFAULT_CATEGORY = 'Força';
+
 export function equipmentLabel(raw: string | null | undefined) {
   if (!raw) return '';
-  return EQUIPMENT[raw.toLowerCase()] ?? EQUIPMENT_LABELS[raw.toUpperCase()] ?? raw;
+  return EQUIPMENT_EN[raw.toLowerCase()] ?? EQUIPMENT_LABELS[raw.toUpperCase()] ?? raw;
 }
 
 export function levelLabel(raw: string | null | undefined) {
   if (!raw) return '';
-  return LEVEL[raw.toLowerCase()] ?? raw;
+  return LEVEL_EN[raw.toLowerCase()] ?? raw;
 }
 
 export function levelTone(raw: string | null | undefined): 'accent' | 'warn' | 'pink' | 'neutral' {
-  switch (raw?.toLowerCase()) {
-    case 'beginner':
+  switch (levelLabel(raw)) {
+    case 'Iniciante':
       return 'accent';
-    case 'intermediate':
+    case 'Intermediário':
       return 'warn';
-    case 'expert':
-    case 'advanced':
+    case 'Avançado':
       return 'pink';
     default:
       return 'neutral';
@@ -65,11 +70,20 @@ export function levelTone(raw: string | null | undefined): 'accent' | 'warn' | '
 
 export function categoryLabel(raw: string | null | undefined) {
   if (!raw) return '';
-  return CATEGORY[raw.toLowerCase()] ?? raw;
+  return CATEGORY_EN[raw.toLowerCase()] ?? raw;
 }
 
 export function sourceLabel(source: CatalogSource) {
-  return source === 'CUSTOM' ? 'Personalizado' : 'Catálogo';
+  switch (source) {
+    case 'CUSTOM':
+      return 'Personalizado';
+    case 'WGER':
+      return 'wger';
+    case 'FREE_EXERCISE_DB':
+      return 'free-exercise-db';
+    default:
+      return 'Catálogo';
+  }
 }
 
 // 1RM estimado (Epley), igual ao da API: carga × (1 + reps / 30); acima de 20 reps não estima.

@@ -25,11 +25,12 @@ App mobile do **FantesDay** (hábitos, alimentação e treinos com gamificação
 ```
 src/
 ├── app/                 # Rotas (Expo Router)
-│   ├── (auth)/          # login, cadastro, esqueci-senha
+│   ├── (auth)/          # login, cadastro, esqueci-senha, redefinir-senha
 │   ├── (tabs)/          # Hoje, Tarefas, Nutrição, Treinos (barra inferior própria)
-│   ├── perfil/  tarefas/  atividades/
-│   ├── refeicoes/  alimentos/          # refeição, busca, detalhe, cadastro, scanner
-│   ├── treinos/  rotinas/  exercicios/ # treino ao vivo, resumo, histórico, catálogo
+│   ├── onboarding, metabolismo, peso, agua   # dados do corpo, TMB/metas, peso, água
+│   ├── perfil/  tarefas/  atividades/        # perfil/senha, atividades/importar
+│   ├── refeicoes/  alimentos/          # refeição, busca, detalhe, cadastro (g/ml), scanner
+│   ├── treinos/  rotinas/  exercicios/ # treino ao vivo, resumo, histórico, rotinas, gerar rotina, catálogo
 │   ├── rank/  ranking/                 # rank de força, mapa muscular, selos, rankings
 │   └── celebracao/                     # animações: nível, rank, sequência, ranking
 ├── api/                 # client.ts (fetch + refresh automático), endpoints.ts, types.ts

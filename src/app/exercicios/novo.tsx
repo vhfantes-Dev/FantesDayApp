@@ -6,15 +6,15 @@ import { exerciseApi } from '@/api/endpoints';
 import type { ExerciseRequest } from '@/api/types';
 import { useToast } from '@/components/Toast';
 import { Button, ErrorBanner, Field, IconButton, LoadingView, Screen, T } from '@/components/ui';
-import { EQUIPMENT_OPTIONS, equipmentLabel, LEVEL_OPTIONS, levelLabel } from '@/components/workouts/labels';
+import { DEFAULT_CATEGORY, EQUIPMENT_OPTIONS, equipmentLabel, LEVEL_OPTIONS, levelLabel } from '@/components/workouts/labels';
 import { Segmented, SelectField, ToggleChip } from '@/components/workouts/parts';
 import { useAction, useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
 import { MUSCLE_GROUPS } from '@/utils/ranks';
 
 const MUSCLE_OPTIONS = MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
-const EQUIP_OPTIONS = EQUIPMENT_OPTIONS.map((e) => ({ value: e, label: equipmentLabel(e) }));
-const LEVELS = LEVEL_OPTIONS.map((l) => ({ value: l, label: levelLabel(l) }));
+const EQUIP_OPTIONS = EQUIPMENT_OPTIONS.map((e) => ({ value: e, label: e }));
+const LEVELS = LEVEL_OPTIONS.map((l) => ({ value: l, label: l }));
 
 export default function NovoExercicioScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
@@ -24,9 +24,9 @@ export default function NovoExercicioScreen() {
 
   const [name, setName] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
-  const [equipment, setEquipment] = useState<string | null>('machine');
+  const [equipment, setEquipment] = useState<string | null>('Máquina');
   const [secondary, setSecondary] = useState<string[]>([]);
-  const [level, setLevel] = useState('beginner');
+  const [level, setLevel] = useState('Iniciante');
   const [instructions, setInstructions] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState<{ name?: string; muscle?: string; imageUrl?: string }>({});
@@ -36,9 +36,9 @@ export default function NovoExercicioScreen() {
     if (!loaded) return;
     setName(loaded.name);
     setMuscle(loaded.muscleGroup);
-    setEquipment(loaded.equipment?.toLowerCase() ?? null);
+    setEquipment(loaded.equipment ? equipmentLabel(loaded.equipment) : null);
     setSecondary((loaded.secondaryMuscles ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-    setLevel(loaded.level?.toLowerCase() === 'advanced' ? 'expert' : loaded.level?.toLowerCase() ?? 'beginner');
+    setLevel(levelLabel(loaded.level) || 'Iniciante');
     setInstructions(loaded.instructions ?? '');
     setImageUrl(loaded.imageUrl ?? '');
   }, [loaded]);
@@ -64,7 +64,7 @@ export default function NovoExercicioScreen() {
       secondaryMuscles: secondary.filter((m) => m !== muscle).join(', '),
       equipment: equipment ?? undefined,
       level,
-      category: loaded?.category ?? 'strength',
+      category: loaded?.category ?? DEFAULT_CATEGORY,
       instructions: instructions
         .split('\n')
         .map((l) => l.trim())
