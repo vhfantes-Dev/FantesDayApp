@@ -8,18 +8,18 @@ import { useAuth } from '@/auth/AuthContext';
 import { ACTIVITY_LEVELS, ageFrom, factorLabel } from '@/components/conta/body';
 import { HeightRuler } from '@/components/conta/HeightRuler';
 import { FadeIn, useOnce } from '@/components/conta/motion';
-import { brToIso, isoToBr, maskDate } from '@/components/rotina/dates';
+import { DateField } from '@/components/DateField';
 import { Segmented } from '@/components/rotina/Segmented';
 import { Button, ErrorBanner, Field, Screen, T } from '@/components/ui';
 import { colors, fonts } from '@/theme';
-import { formatDecimal, parseNumber, today } from '@/utils/format';
+import { addDays, formatDecimal, parseNumber, today } from '@/utils/format';
 
 type Errors = Partial<Record<'sex' | 'birth' | 'weight' | 'level', string>>;
 
 export default function OnboardingScreen() {
   const { user, setUser } = useAuth();
   const [sex, setSex] = useState<Sex | null>(user?.sex ?? null);
-  const [birth, setBirth] = useState(isoToBr(user?.birthDate));
+  const [birth, setBirth] = useState<string | null>(user?.birthDate ?? null);
   const [weight, setWeight] = useState(user?.bodyweightKg ? formatDecimal(user.bodyweightKg) : '');
   const [height, setHeight] = useState(user?.heightCm ? Math.round(user.heightCm) : 170);
   const [level, setLevel] = useState<ActivityLevel | null>(user?.activityLevel ?? null);
@@ -37,8 +37,8 @@ export default function OnboardingScreen() {
     if (!user) return;
     const next: Errors = {};
     if (!sex) next.sex = 'Escolha uma opção.';
-    const birthIso = brToIso(birth);
-    if (!birthIso) next.birth = 'Use dd/mm/aaaa.';
+    const birthIso = birth;
+    if (!birthIso) next.birth = 'Escolha sua data de nascimento.';
     else {
       const age = ageFrom(birthIso, today());
       if (age < 10 || age > 110) next.birth = 'Confira o ano.';
@@ -114,17 +114,16 @@ export default function OnboardingScreen() {
       </FadeIn>
 
       <FadeIn delay={60} style={styles.row}>
-        <Field
+        <DateField
           style={{ flex: 1 }}
           label="Nascimento"
           value={birth}
-          onChangeText={(t) => {
-            setBirth(maskDate(t));
+          onChange={(iso) => {
+            setBirth(iso);
             setErrors((e) => ({ ...e, birth: undefined }));
           }}
-          placeholder="dd/mm/aaaa"
-          keyboardType="number-pad"
-          maxLength={10}
+          maximumDate={today()}
+          initialDate={addDays(today(), -365 * 25)}
           error={errors.birth}
         />
         <Field

@@ -1,5 +1,5 @@
 // Helpers dos formulários de tarefas e atividades: máscaras de data/hora e dias da semana.
-import { parseIsoDate, toIsoDate } from '@/utils/format';
+import { parseIsoDate } from '@/utils/format';
 
 // Ordem de exibição (domingo primeiro, como no design) e códigos aceitos pela API.
 export const DAY_CODES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const;
@@ -53,24 +53,6 @@ export function daysPhrase(days: DayCode[]) {
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
   const weekendOnly = days.every((d) => d === 'SAB' || d === 'DOM');
   return `${weekendOnly && days.length === 1 ? 'todo' : 'toda'} ${list}`;
-}
-
-// Máscara "26092026" → "26/09/2026"
-export function maskDate(text: string) {
-  const digits = text.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-}
-
-// "26/09/2026" → "2026-09-26" (null se inválida)
-export function brToIso(text: string): string | null {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  const date = new Date(Number(y), Number(mo) - 1, Number(d));
-  if (date.getFullYear() !== Number(y) || date.getMonth() !== Number(mo) - 1 || date.getDate() !== Number(d)) return null;
-  return toIsoDate(date);
 }
 
 // "2026-09-26" → "26/09/2026"

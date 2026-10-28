@@ -141,6 +141,15 @@ export default function RefeicaoScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Foto da refeição"
+                hitSlop={6}
+                onPress={() => router.push({ pathname: '/refeicoes/foto', params: addParams })}
+                style={styles.scanBtn}
+              >
+                <Icon name="camera" size={18} color={colors.text} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="Ler código de barras"
                 hitSlop={6}
                 onPress={() => router.push({ pathname: '/alimentos/scanner', params: addParams })}
@@ -161,13 +170,22 @@ export default function RefeicaoScreen() {
           </View>
 
           {items.length === 0 ? (
-            <EmptyState
-              icon="apple"
-              title="Refeição vazia"
-              message="Busque um alimento ou leia o código de barras para adicionar."
-              action="Buscar alimento"
-              onAction={() => router.push({ pathname: '/alimentos/buscar', params: addParams })}
-            />
+            <View style={{ gap: 10 }}>
+              <EmptyState
+                icon="apple"
+                title="Refeição vazia"
+                message="Busque um alimento, leia o código de barras ou fotografe o prato."
+                action="Buscar alimento"
+                onAction={() => router.push({ pathname: '/alimentos/buscar', params: addParams })}
+              />
+              <Button
+                title="Foto da refeição"
+                icon="camera"
+                variant="secondary"
+                small
+                onPress={() => router.push({ pathname: '/refeicoes/foto', params: addParams })}
+              />
+            </View>
           ) : (
             <View style={{ gap: 10 }}>
               {items.map((item) => (

@@ -1,4 +1,4 @@
-import type { Activity } from '@/api/types';
+import type { Activity, KnownActivity } from '@/api/types';
 import type { IconName } from '@/components/Icon';
 import { colors } from '@/theme';
 
@@ -20,16 +20,41 @@ export const ACTIVITY_KINDS: ActivityKind[] = [
 
 export const OTHER_KIND: ActivityKind = { label: 'Outra', icon: 'more', color: colors.textSoft, bg: colors.surface2 };
 
-const normalize = (s: string) =>
+export const normalize = (s: string) =>
   s
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .trim()
     .toLowerCase();
 
+// Ícone de outras atividades do catálogo parecidas com as comuns.
+const SIMILAR: { match: RegExp; base: string }[] = [
+  { match: /trote|esteira/, base: 'Corrida' },
+  { match: /caminhada|trilha|escada/, base: 'Caminhada' },
+  { match: /bicicleta|spinning|bike/, base: 'Ciclismo' },
+  { match: /hidro|remo|surf|paddle/, base: 'Natação' },
+  { match: /crossfit|funcional|hiit|eliptico/, base: 'Musculação' },
+];
+
 export function kindOf(activityType: string): ActivityKind {
   const n = normalize(activityType);
-  return ACTIVITY_KINDS.find((k) => normalize(k.label) === n) ?? { ...OTHER_KIND, label: activityType };
+  const exact = ACTIVITY_KINDS.find((k) => normalize(k.label) === n);
+  if (exact) return exact;
+  const similar = SIMILAR.find((s) => s.match.test(n));
+  const base = similar && ACTIVITY_KINDS.find((k) => k.label === similar.base);
+  return base ? { ...base, label: activityType } : { ...OTHER_KIND, label: activityType };
+}
+
+// Atividade do catálogo da API com o mesmo nome (sem diferenciar acento ou maiúscula).
+export function findKnown(catalog: KnownActivity[] | undefined, activityType: string) {
+  const n = normalize(activityType);
+  if (!n || !catalog) return undefined;
+  return catalog.find((k) => normalize(k.name) === n);
+}
+
+// kcal = MET × peso × horas (mesma fórmula da API)
+export function estimateKcal(met: number, weightKg: number, minutes: number) {
+  return Math.round(met * weightKg * (minutes / 60));
 }
 
 export function isKnownKind(activityType: string) {

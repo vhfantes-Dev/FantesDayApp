@@ -62,6 +62,7 @@ export default function AtividadesScreen() {
   const week = (data ?? []).filter((a) => a.date >= weekStart && a.date <= todayIso);
   const minutes = week.reduce((s, a) => s + (a.durationMinutes ?? 0), 0);
   const kcal = week.reduce((s, a) => s + (a.caloriesBurned ?? 0), 0);
+  const anyEstimated = week.some((a) => a.caloriesEstimated && a.caloriesBurned);
   const xp = week.reduce((s, a) => s + (a.xpEarned ?? 0), 0);
   const groups = data ? groupActivities(data, todayIso) : [];
 
@@ -97,7 +98,7 @@ export default function AtividadesScreen() {
           <View style={styles.stats}>
             <StatBox value={String(week.length)} label="na semana" />
             <StatBox value={formatNumber(minutes)} label="minutos" />
-            <StatBox value={formatNumber(kcal)} label="kcal gastas" />
+            <StatBox value={`${anyEstimated ? '≈ ' : ''}${formatNumber(kcal)}`} label="kcal gastas" />
           </View>
           {xp > 0 ? (
             <View style={styles.xpRow}>
@@ -147,7 +148,9 @@ function ActivityRow({ activity, showDate }: { activity: Activity; showDate: boo
   const parts = [
     showDate ? `${WEEKDAY[d.getDay()]}, ${d.getDate()}` : null,
     activity.durationMinutes ? `${activity.durationMinutes} min` : null,
-    activity.caloriesBurned ? `${formatNumber(activity.caloriesBurned)} kcal` : null,
+    activity.caloriesBurned
+      ? `${activity.caloriesEstimated ? '≈ ' : ''}${formatNumber(activity.caloriesBurned)} kcal${activity.caloriesEstimated ? ' (estimado)' : ''}`
+      : null,
   ].filter(Boolean);
   const imported = isImported(activity);
   return (

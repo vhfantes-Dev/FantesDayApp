@@ -15,11 +15,13 @@ import type {
   Food,
   FoodRequest,
   GenerateRoutineRequest,
+  KnownActivity,
   LeaderboardEntry,
   Meal,
   MealItem,
   MealItemRequest,
   MealNutrition,
+  MealPhotoAnalysis,
   MessageResponse,
   NutritionGoal,
   NutritionGoalRequest,
@@ -90,6 +92,10 @@ export const activityApi = {
   create: (userId: number, data: ActivityRequest) => api.post<Activity>(`/users/${userId}/activities`, data),
   update: (id: number, data: ActivityRequest) => api.patch<Activity>(`/activities/${id}`, data),
   remove: (id: number) => api.del(`/activities/${id}`),
+  // Texto livre ("joguei vôlei por 2 horas"); a API lê a atividade e a duração (com o Gemini se precisar)
+  fromText: (userId: number, text: string, date?: string) =>
+    api.post<Activity>(`/users/${userId}/activities/text`, { text, date }),
+  catalog: () => api.get<KnownActivity[]>('/activities/catalog'),
   // Lote vindo de Apple Saúde / Google Fit; externalId evita importar duas vezes
   importBatch: (userId: number, data: ActivityImportRequest) =>
     api.post<ActivityImportResult>(`/users/${userId}/activities/import`, data),
@@ -116,6 +122,8 @@ export const mealApi = {
   addItem: (id: number, data: MealItemRequest) => api.post<MealItem>(`/meals/${id}/items`, data),
   updateItem: (itemId: number, data: MealItemRequest) => api.patch<MealItem>(`/meal-items/${itemId}`, data),
   removeItem: (itemId: number) => api.del(`/meal-items/${itemId}`),
+  // Foto da refeição → alimentos, porções e calorias estimados pela IA (multipart: file + description)
+  analyzePhoto: (form: FormData) => api.postForm<MealPhotoAnalysis>('/meals/analyze-photo', form),
 };
 
 export const goalApi = {

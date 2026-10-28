@@ -228,6 +228,36 @@ export interface Activity {
   caloriesBurned: number | null;
   date: string;
   xpEarned: number | null;
+  // true quando a API calculou as calorias (MET × peso × horas)
+  caloriesEstimated: boolean | null;
+  met: number | null;
+}
+
+// Atividade reconhecida pela API e o MET usado no cálculo das calorias
+export interface KnownActivity {
+  code: string;
+  name: string;
+  met: number;
+}
+
+// Estimativa da IA a partir da foto de uma refeição (nada é salvo)
+export interface MealPhotoAnalysis {
+  description: string | null;
+  items: {
+    name: string;
+    portionGrams: number | null;
+    calories: number | null;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+    // ALTA, MEDIA ou BAIXA
+    confidence: string | null;
+    // Alimento do catálogo mais parecido (pode ser null)
+    foodId: number | null;
+    foodName: string | null;
+  }[];
+  totals: MealNutrition;
+  notes: string | null;
 }
 
 export interface ActivityRequest {

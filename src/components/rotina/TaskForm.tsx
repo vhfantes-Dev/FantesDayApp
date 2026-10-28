@@ -1,11 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
 import type { Task, TaskRequest } from '@/api/types';
+import { DateField } from '@/components/DateField';
 import { Icon } from '@/components/Icon';
 import { Field, T } from '@/components/ui';
 import { colors, fonts } from '@/theme';
 import { hhmm } from '@/utils/format';
-import { brToIso, daysPhrase, isoToBr, maskDate, maskTime, parseDays, timeToApi, type DayCode } from './dates';
+import { daysPhrase, isoToBr, maskTime, parseDays, timeToApi, type DayCode } from './dates';
 import { Segmented, WeekdayPicker } from './Segmented';
 
 export type TaskKind = 'habit' | 'once';
@@ -13,20 +14,20 @@ export type TaskKind = 'habit' | 'once';
 export interface TaskFormState {
   title: string;
   kind: TaskKind;
-  date: string; // dd/mm/aaaa
+  date: string | null; // yyyy-MM-dd
   time: string; // HH:mm
   days: DayCode[];
 }
 
 export type TaskFormErrors = Partial<Record<'title' | 'date' | 'time' | 'days', string>>;
 
-export const emptyTaskForm: TaskFormState = { title: '', kind: 'habit', date: '', time: '', days: [] };
+export const emptyTaskForm: TaskFormState = { title: '', kind: 'habit', date: null, time: '', days: [] };
 
 export function taskToForm(task: Task): TaskFormState {
   return {
     title: task.title,
     kind: task.recurring ? 'habit' : 'once',
-    date: isoToBr(task.date),
+    date: task.date,
     time: hhmm(task.time),
     days: parseDays(task.weekDays),
   };
@@ -42,12 +43,7 @@ export function buildTaskRequest(
   if (!title) errors.title = 'Dê um nome para a tarefa.';
   else if (title.length > 120) errors.title = 'Use no máximo 120 caracteres.';
 
-  let date: string | undefined;
-  if (form.date.trim()) {
-    const iso = brToIso(form.date);
-    if (!iso) errors.date = 'Data inválida. Use dd/mm/aaaa.';
-    else date = iso;
-  }
+  const date = form.date ?? undefined;
 
   let time: string | undefined;
   if (form.time.trim()) {
@@ -88,9 +84,8 @@ export function TaskFormFields({
       ? `Repete ${daysPhrase(form.days)}${time ? ` às ${time}` : ''}`
       : 'Escolha os dias em que o hábito se repete.';
   } else {
-    const iso = brToIso(form.date);
-    summary = iso
-      ? `Só em ${form.date}${time ? ` às ${time}` : ''}`
+    summary = form.date
+      ? `Só em ${isoToBr(form.date)}${time ? ` às ${time}` : ''}`
       : 'Sem data, aparece todo dia até ser concluída.';
   }
 
@@ -118,14 +113,13 @@ export function TaskFormFields({
       />
 
       <View style={styles.row}>
-        <Field
+        <DateField
           style={{ flex: 1 }}
           label={form.kind === 'habit' ? 'Início' : 'Data'}
           value={form.date}
-          onChangeText={(t) => onChange({ date: maskDate(t) })}
-          placeholder="dd/mm/aaaa"
-          keyboardType="number-pad"
-          maxLength={10}
+          onChange={(date) => onChange({ date })}
+          placeholder="Opcional"
+          clearable
           error={errors.date}
         />
         <Field

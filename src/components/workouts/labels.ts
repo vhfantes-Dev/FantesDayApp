@@ -108,21 +108,6 @@ export function clock(totalSeconds: number) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-// Data "dd/mm/aaaa" → "aaaa-mm-dd" (ou undefined se inválida).
-export function parseBrDate(text: string): string | undefined {
-  const m = text.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) return undefined;
-  const [d, mo, y] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const date = new Date(y, mo - 1, d);
-  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return undefined;
-  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-}
-
-export function formatBrDate(iso: string) {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-
 // Converte o createdAt da API em milissegundos (ou null se não der para confiar).
 export function parseTimestamp(value: string | null | undefined) {
   if (!value) return null;

@@ -7,7 +7,7 @@ import { useUserId } from '@/auth/AuthContext';
 import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { Button, Field, IconButton, Screen, T } from '@/components/ui';
-import { formatBrDate, parseBrDate } from '@/components/workouts/labels';
+import { DateField } from '@/components/DateField';
 import { OptionGrid, Segmented } from '@/components/workouts/parts';
 import { useAction } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
@@ -54,16 +54,16 @@ function FreeWorkoutForm() {
   const userId = useUserId();
   const toast = useToast();
   const [name, setName] = useState('');
-  const [date, setDate] = useState(formatBrDate(today()));
+  const [date, setDate] = useState<string | null>(today());
   const [xp, setXp] = useState(50);
   const [errors, setErrors] = useState<{ name?: string; date?: string }>({});
   const create = useAction(workoutApi.create);
 
   async function submit() {
-    const iso = parseBrDate(date);
+    const iso = date;
     const next = {
       name: name.trim() ? undefined : 'Dê um nome ao treino.',
-      date: iso ? (iso > today() ? 'A data não pode ser no futuro.' : undefined) : 'Use o formato dd/mm/aaaa.',
+      date: iso ? (iso > today() ? 'A data não pode ser no futuro.' : undefined) : 'Escolha a data do treino.',
     };
     setErrors(next);
     if (next.name || next.date || !iso) return;
@@ -86,7 +86,7 @@ function FreeWorkoutForm() {
         returnKeyType="next"
         maxLength={80}
       />
-      <Field label="Data" value={date} onChangeText={setDate} error={errors.date} keyboardType="numbers-and-punctuation" placeholder="dd/mm/aaaa" maxLength={10} />
+      <DateField label="Data" value={date} onChange={setDate} maximumDate={today()} error={errors.date} />
       <View style={{ gap: 8 }}>
         <T variant="label">XP ao concluir</T>
         <OptionGrid label="XP ao concluir" options={XP_OPTIONS} value={xp} onChange={setXp} />

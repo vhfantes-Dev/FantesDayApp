@@ -125,6 +125,8 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     }
   } catch (e) {
     if (e instanceof ApiError) throw e;
+    // Qualquer erro do fetch vira "sem conexão"; o original fica no log para não esconder a causa
+    console.warn(`[api] ${opts.method ?? 'GET'} ${path} falhou:`, e);
     throw new ApiError(0, `Sem conexão com a API (${API_URL}).`);
   }
   if (!res.ok) throw await parseError(res);
@@ -140,6 +142,7 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
   del: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'PUT', form }),
+  postForm: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', form }),
   publicPost: <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body, auth: false }),
 };
 

@@ -16,12 +16,12 @@ type SourceTab = 'catalog' | 'off';
 const PAGE_SIZE = 20;
 
 export default function BuscarAlimentosScreen() {
-  const { mealId } = useLocalSearchParams<{ mealId?: string }>();
+  const { mealId, q } = useLocalSearchParams<{ mealId?: string; q?: string }>();
   const mealParams = mealId ? { mealId } : {};
   const toast = useToast();
   const insets = useSafeAreaInsets();
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(typeof q === 'string' ? q : '');
   const [tab, setTab] = useState<SourceTab>('catalog');
 
   // Catálogo (paginado)

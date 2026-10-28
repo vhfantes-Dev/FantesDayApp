@@ -4,17 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { goalApi, userApi } from '@/api/endpoints';
+import { appendFile } from '@/api/upload';
 import type { ActivityLevel, NutritionGoalRequest, Sex, UserRequest } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { ACTIVITY_LEVELS, ageFrom } from '@/components/conta/body';
 import { UserPhoto, useDeleteAccount } from '@/components/conta/UserPhoto';
-import { brToIso, isoToBr, maskDate } from '@/components/rotina/dates';
+import { DateField } from '@/components/DateField';
 import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { Button, Chip, ErrorBanner, Field, Header, Screen, Section, SkeletonList, T } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { colors, fonts } from '@/theme';
-import { formatDecimal, parseNumber, today } from '@/utils/format';
+import { addDays, formatDecimal, parseNumber, today } from '@/utils/format';
 
 type GoalKey = 'dailyCalories' | 'proteinG' | 'carbsG' | 'fatG' | 'dailyWaterMl';
 type Errors = Partial<Record<'name' | 'email' | 'weight' | 'height' | 'birth' | GoalKey, string>>;
@@ -42,7 +43,7 @@ export default function EditarPerfilScreen() {
   const [weight, setWeight] = useState(numText(user?.bodyweightKg));
   const [sex, setSex] = useState<Sex | null>(user?.sex ?? null);
   const [height, setHeight] = useState(user?.heightCm ? String(Math.round(user.heightCm)) : '');
-  const [birth, setBirth] = useState(isoToBr(user?.birthDate));
+  const [birth, setBirth] = useState<string | null>(user?.birthDate ?? null);
   const [level, setLevel] = useState<ActivityLevel | null>(user?.activityLevel ?? null);
   const [goalForm, setGoalForm] = useState<Record<GoalKey, string>>({
     dailyCalories: '',
@@ -85,11 +86,9 @@ export default function EditarPerfilScreen() {
     const cm = height.trim() ? Number(height) : undefined;
     if (cm !== undefined && (!Number.isFinite(cm) || cm < 100 || cm > 250)) next.height = 'Altura inválida (100 a 250 cm).';
     let birthIso: string | undefined;
-    if (birth.trim()) {
-      const iso = brToIso(birth);
-      if (!iso) next.birth = 'Data inválida. Use dd/mm/aaaa.';
-      else if (ageFrom(iso, today()) < 10 || ageFrom(iso, today()) > 110) next.birth = 'Confira o ano de nascimento.';
-      else birthIso = iso;
+    if (birth) {
+      if (ageFrom(birth, today()) < 10 || ageFrom(birth, today()) > 110) next.birth = 'Confira o ano de nascimento.';
+      else birthIso = birth;
     }
 
     const goalRequest: NutritionGoalRequest = {};
@@ -146,10 +145,10 @@ export default function EditarPerfilScreen() {
     const asset = result.assets[0];
     const type = asset.mimeType ?? 'image/jpeg';
     const ext = type.split('/')[1] ?? 'jpg';
-    const form = new FormData();
-    form.append('file', { uri: asset.uri, name: asset.fileName ?? `foto.${ext}`, type } as unknown as Blob);
     setPhotoBusy(true);
     try {
+      const form = new FormData();
+      await appendFile(form, 'file', { uri: asset.uri, name: asset.fileName ?? `foto.${ext}`, type });
       setUser(await userApi.uploadPhoto(currentUser.id, form));
       setPhotoVersion((v) => v + 1);
       toast.success('Foto atualizada');
@@ -267,17 +266,16 @@ export default function EditarPerfilScreen() {
         />
       </View>
       <View style={styles.row}>
-        <Field
+        <DateField
           style={{ flex: 1 }}
           label="Nascimento"
           value={birth}
-          onChangeText={(t) => {
-            setBirth(maskDate(t));
+          onChange={(iso) => {
+            setBirth(iso);
             setErrors((e) => ({ ...e, birth: undefined }));
           }}
-          placeholder="dd/mm/aaaa"
-          keyboardType="number-pad"
-          maxLength={10}
+          maximumDate={today()}
+          initialDate={addDays(today(), -365 * 25)}
           error={errors.birth}
         />
         <View style={{ flex: 1, gap: 8 }}>

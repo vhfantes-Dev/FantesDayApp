@@ -67,7 +67,8 @@
         {
           "faceIDPermission": "Use o Face ID para entrar no FantesDay sem digitar a senha."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false

@@ -138,6 +138,20 @@ export default function NutricaoScreen() {
                 <Icon name="barcode" size={18} color={colors.text} />
               </Pressable>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/refeicoes/foto')}
+              style={({ pressed }) => [styles.photoRow, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.photoIcon}>
+                <Icon name="camera" size={18} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.photoTitle}>Foto da refeição</Text>
+                <T variant="caption" style={{ fontSize: 11 }}>Estime calorias e macros com IA</T>
+              </View>
+              <Icon name="chevronRight" size={18} color={colors.textMuted} />
+            </Pressable>
             <WaterRow water={dataForDate.water} onPress={() => router.push({ pathname: '/agua', params: { date } })} />
           </View>
 
@@ -284,6 +298,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: WATER.cardBorder,
   },
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 52,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  photoIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  photoTitle: { fontFamily: fonts.bold, fontSize: 13, color: colors.text },
   waterText: { flex: 1, fontFamily: fonts.bold, fontSize: 13, color: colors.text },
   waterTrack: { width: 80, height: 6, borderRadius: 99, backgroundColor: WATER.cardBorder, overflow: 'hidden' },
   waterFill: { height: 6, borderRadius: 99, backgroundColor: WATER.light },
