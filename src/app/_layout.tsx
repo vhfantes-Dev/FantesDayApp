@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { BootSplash } from '@/components/BootSplash';
 import { consumeOnboardingPending } from '@/components/conta/onboardingFlag';
 import { ToastProvider } from '@/components/Toast';
 import { colors } from '@/theme';
@@ -16,10 +17,6 @@ void SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { status } = useAuth();
-
-  useEffect(() => {
-    if (status !== 'loading') void SplashScreen.hideAsync();
-  }, [status]);
 
   // Logo depois do cadastro: espera a pilha autenticada montar e abre o onboarding por cima da Home.
   useEffect(() => {
@@ -61,16 +58,24 @@ export default function RootLayout() {
     Unbounded_700Bold,
   });
 
-  if (!fontsLoaded) return null;
-
   return (
     <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
       <StatusBar style="light" />
       <AuthProvider>
         <ToastProvider>
-          <RootNavigator />
+          <AppShell fontsLoaded={fontsLoaded} />
         </ToastProvider>
       </AuthProvider>
     </SafeAreaProvider>
+  );
+}
+
+// Mostra a splash com o logo até as fontes e a sessão carregarem.
+function AppShell({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { status } = useAuth();
+  return (
+    <BootSplash ready={fontsLoaded && status !== 'loading'}>
+      <RootNavigator />
+    </BootSplash>
   );
 }
